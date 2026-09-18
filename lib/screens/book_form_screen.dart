@@ -215,9 +215,7 @@ class _BookFormScreenState extends State<BookFormScreen> {
       child: Scaffold(
         appBar: AppBar(
           title: Text(
-            widget.isEditing
-                ? 'Редактирование книги'
-                : 'Новая книга (Сервер)',
+            widget.isEditing ? 'Редактирование книги' : 'Новая книга (Сервер)',
           ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
