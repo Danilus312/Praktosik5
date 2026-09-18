@@ -124,11 +124,13 @@ class _BookFormScreenState extends State<BookFormScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Остаться')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Остаться'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Уйти')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Уйти'),
+          ),
         ],
       ),
     );
@@ -212,9 +214,11 @@ class _BookFormScreenState extends State<BookFormScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.isEditing
-              ? 'Редактирование книги'
-              : 'Новая книга (Сервер)'),
+          title: Text(
+            widget.isEditing
+                ? 'Редактирование книги'
+                : 'Новая книга (Сервер)',
+          ),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
@@ -292,14 +296,19 @@ class _BookFormScreenState extends State<BookFormScreen> {
                         ),
                         const SizedBox(height: 16),
                         DropdownButtonFormField<int>(
+                          // ignore: deprecated_member_use
                           value: _publisherId,
                           decoration: const InputDecoration(
                             labelText: 'Издательство (Многие к одному) *',
                             border: OutlineInputBorder(),
                           ),
                           items: _publishers
-                              .map((p) => DropdownMenuItem(
-                                  value: p.id, child: Text(p.name)))
+                              .map(
+                                (p) => DropdownMenuItem<int>(
+                                  value: p.id,
+                                  child: Text(p.name),
+                                ),
+                              )
                               .toList(),
                           onChanged: (val) {
                             setState(() => _publisherId = val);
@@ -421,17 +430,21 @@ class _BookFormScreenState extends State<BookFormScreen> {
                                   width: 20,
                                   height: 20,
                                   child: CircularProgressIndicator(
-                                      strokeWidth: 2, color: Colors.white),
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
                                 )
                               : const Icon(Icons.save),
-                          label: Text(_saving
-                              ? 'Сохранение...'
-                              : (widget.isEditing
-                                  ? 'Сохранить'
-                                  : 'Создать книгу')),
+                          label: Text(
+                            _saving
+                                ? 'Сохранение...'
+                                : (widget.isEditing
+                                    ? 'Сохранить'
+                                    : 'Создать книгу'),
+                          ),
                           style: FilledButton.styleFrom(
-                              padding:
-                                  const EdgeInsets.symmetric(vertical: 16)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
                           onPressed: _saving ? null : _submit,
                         ),
                       ],
