@@ -33,11 +33,13 @@ class PersistentLibraryRepository implements BookRepository {
     books = _restoreList(_booksKey, seedBooks, (j) => Book.fromJson(j));
     authors = _restoreList(_authorsKey, seedAuthors, (j) => Author.fromJson(j));
     genres = _restoreList(_genresKey, seedGenres, (j) => Genre.fromJson(j));
-    publishers = _restoreList(_publishersKey, seedPublishers, (j) => Publisher.fromJson(j));
+    publishers = _restoreList(
+        _publishersKey, seedPublishers, (j) => Publisher.fromJson(j));
     readers = _restoreList(_readersKey, seedReaders, (j) => Reader.fromJson(j));
   }
 
-  List<T> _restoreList<T>(String key, List<T> fallback, T Function(Map<String, dynamic>) fromJson) {
+  List<T> _restoreList<T>(
+      String key, List<T> fallback, T Function(Map<String, dynamic>) fromJson) {
     final raw = _prefs.getString(key);
     if (raw == null) {
       _prefs.setString(key, jsonEncode(fallback));
@@ -52,16 +54,16 @@ class PersistentLibraryRepository implements BookRepository {
     }
   }
 
-  Future<void> saveBooks() async =>
-      _prefs.setString(_booksKey, jsonEncode(books.map((e) => e.toJson()).toList()));
-  Future<void> saveAuthors() async =>
-      _prefs.setString(_authorsKey, jsonEncode(authors.map((e) => e.toJson()).toList()));
-  Future<void> saveGenres() async =>
-      _prefs.setString(_genresKey, jsonEncode(genres.map((e) => e.toJson()).toList()));
-  Future<void> savePublishers() async =>
-      _prefs.setString(_publishersKey, jsonEncode(publishers.map((e) => e.toJson()).toList()));
-  Future<void> saveReaders() async =>
-      _prefs.setString(_readersKey, jsonEncode(readers.map((e) => e.toJson()).toList()));
+  Future<void> saveBooks() async => _prefs.setString(
+      _booksKey, jsonEncode(books.map((e) => e.toJson()).toList()));
+  Future<void> saveAuthors() async => _prefs.setString(
+      _authorsKey, jsonEncode(authors.map((e) => e.toJson()).toList()));
+  Future<void> saveGenres() async => _prefs.setString(
+      _genresKey, jsonEncode(genres.map((e) => e.toJson()).toList()));
+  Future<void> savePublishers() async => _prefs.setString(
+      _publishersKey, jsonEncode(publishers.map((e) => e.toJson()).toList()));
+  Future<void> saveReaders() async => _prefs.setString(
+      _readersKey, jsonEncode(readers.map((e) => e.toJson()).toList()));
 
   @override
   Future<PageResult<Book>> find(BookQuery q) async {
@@ -175,12 +177,16 @@ class PersistentLibraryRepository implements BookRepository {
   }
 
   int countBooksByPublisher(int publisherId) {
-    return books.where((b) => b.publisherId == publisherId && !b.isDeleted).length;
+    return books
+        .where((b) => b.publisherId == publisherId && !b.isDeleted)
+        .length;
   }
 
   Future<Book> saveBook(Book book) async {
     if (book.id == 0) {
-      final newId = books.isEmpty ? 1 : (books.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1);
+      final newId = books.isEmpty
+          ? 1
+          : (books.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1);
       final newBook = Book(
         id: newId,
         title: book.title,
@@ -208,7 +214,9 @@ class PersistentLibraryRepository implements BookRepository {
 
   Future<Reader> saveReader(Reader reader) async {
     if (reader.id == 0) {
-      final newId = readers.isEmpty ? 1 : (readers.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1);
+      final newId = readers.isEmpty
+          ? 1
+          : (readers.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1);
       final created = Reader(
         id: newId,
         fullName: reader.fullName,

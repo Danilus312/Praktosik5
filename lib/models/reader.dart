@@ -54,6 +54,8 @@ class Reader {
         card: json['card'] != null
             ? LibraryCard.fromJson(json['card'] as Map<String, dynamic>)
             : LibraryCard(cardNumber: 'LC-000', issuedAt: DateTime.now()),
-        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+        deletedAt: json['deletedAt'] == null
+            ? null
+            : DateTime.tryParse(json['deletedAt'] as String),
       );
 }

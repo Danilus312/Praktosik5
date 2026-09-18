@@ -16,7 +16,8 @@ Dio buildDio({AuthNotifier? authNotifier}) {
     InterceptorsWrapper(
       onRequest: (options, handler) {
         if (authNotifier?.accessToken != null) {
-          options.headers['Authorization'] = 'Bearer ${authNotifier!.accessToken}';
+          options.headers['Authorization'] =
+              'Bearer ${authNotifier!.accessToken}';
         }
         return handler.next(options);
       },
@@ -28,7 +29,8 @@ Dio buildDio({AuthNotifier? authNotifier}) {
           try {
             await authNotifier.refreshTokens();
             final opts = error.requestOptions;
-            opts.headers['Authorization'] = 'Bearer ${authNotifier.accessToken}';
+            opts.headers['Authorization'] =
+                'Bearer ${authNotifier.accessToken}';
 
             final cloneDio = Dio(
               BaseOptions(

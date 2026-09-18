@@ -29,7 +29,9 @@ class LibraryCard {
 
   factory LibraryCard.fromJson(Map<String, dynamic> json) => LibraryCard(
         cardNumber: json['cardNumber'] as String? ?? '',
-        issuedAt: json['issuedAt'] == null ? DateTime.now() : (DateTime.tryParse(json['issuedAt'] as String) ?? DateTime.now()),
+        issuedAt: json['issuedAt'] == null
+            ? DateTime.now()
+            : (DateTime.tryParse(json['issuedAt'] as String) ?? DateTime.now()),
         isActive: json['isActive'] as bool? ?? true,
       );
 }

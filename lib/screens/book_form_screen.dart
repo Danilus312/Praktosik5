@@ -123,8 +123,12 @@ class _BookFormScreenState extends State<BookFormScreen> {
           'Вы уверены, что хотите покинуть форму? Все несохраненные данные будут потеряны.',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Остаться')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Уйти')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Остаться')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Уйти')),
         ],
       ),
     );
@@ -169,7 +173,9 @@ class _BookFormScreenState extends State<BookFormScreen> {
       messenger.showSnackBar(
         SnackBar(
           content: Text(
-            widget.isEditing ? 'Книга успешно обновлена' : 'Книга успешно добавлена на сервере',
+            widget.isEditing
+                ? 'Книга успешно обновлена'
+                : 'Книга успешно добавлена на сервере',
           ),
         ),
       );
@@ -206,7 +212,9 @@ class _BookFormScreenState extends State<BookFormScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.isEditing ? 'Редактирование книги' : 'Новая книга (Сервер)'),
+          title: Text(widget.isEditing
+              ? 'Редактирование книги'
+              : 'Новая книга (Сервер)'),
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () async {
@@ -240,7 +248,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
                             errorText: _serverErrors['title'],
                           ),
                           validator: (v) =>
-                              AppValidators.requiredField(v) ?? AppValidators.minLength(v, 2),
+                              AppValidators.requiredField(v) ??
+                              AppValidators.minLength(v, 2),
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
@@ -263,7 +272,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
                                   border: OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.number,
-                                validator: (v) => AppValidators.intRange(v, 1500, 2026),
+                                validator: (v) =>
+                                    AppValidators.intRange(v, 1500, 2026),
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -288,19 +298,22 @@ class _BookFormScreenState extends State<BookFormScreen> {
                             border: OutlineInputBorder(),
                           ),
                           items: _publishers
-                              .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name)))
+                              .map((p) => DropdownMenuItem(
+                                  value: p.id, child: Text(p.name)))
                               .toList(),
                           onChanged: (val) {
                             setState(() => _publisherId = val);
                             _markDirty();
                           },
-                          validator: (v) => v == null ? 'Выберите издательство' : null,
+                          validator: (v) =>
+                              v == null ? 'Выберите издательство' : null,
                         ),
                         const SizedBox(height: 16),
                         FormField<List<int>>(
                           initialValue: _authorIds,
-                          validator: (v) =>
-                              (_authorIds.isEmpty) ? 'Выберите хотя бы одного автора' : null,
+                          validator: (v) => (_authorIds.isEmpty)
+                              ? 'Выберите хотя бы одного автора'
+                              : null,
                           builder: (state) {
                             return InputDecorator(
                               decoration: InputDecoration(
@@ -318,7 +331,9 @@ class _BookFormScreenState extends State<BookFormScreen> {
                                     selected: selected,
                                     onSelected: (val) {
                                       setState(() {
-                                        val ? _authorIds.add(a.id) : _authorIds.remove(a.id);
+                                        val
+                                            ? _authorIds.add(a.id)
+                                            : _authorIds.remove(a.id);
                                       });
                                       state.didChange(_authorIds);
                                       _markDirty();
@@ -332,8 +347,9 @@ class _BookFormScreenState extends State<BookFormScreen> {
                         const SizedBox(height: 16),
                         FormField<List<int>>(
                           initialValue: _genreIds,
-                          validator: (v) =>
-                              (_genreIds.isEmpty) ? 'Выберите хотя бы один жанр' : null,
+                          validator: (v) => (_genreIds.isEmpty)
+                              ? 'Выберите хотя бы один жанр'
+                              : null,
                           builder: (state) {
                             return InputDecorator(
                               decoration: InputDecoration(
@@ -351,7 +367,9 @@ class _BookFormScreenState extends State<BookFormScreen> {
                                     selected: selected,
                                     onSelected: (val) {
                                       setState(() {
-                                        val ? _genreIds.add(g.id) : _genreIds.remove(g.id);
+                                        val
+                                            ? _genreIds.add(g.id)
+                                            : _genreIds.remove(g.id);
                                       });
                                       state.didChange(_genreIds);
                                       _markDirty();
@@ -388,7 +406,8 @@ class _BookFormScreenState extends State<BookFormScreen> {
                                 validator: (v) => AppValidators.intRange(
                                   v,
                                   0,
-                                  int.tryParse(_copiesTotalController.text) ?? 9999,
+                                  int.tryParse(_copiesTotalController.text) ??
+                                      9999,
                                   'Не может превышать общее число',
                                 ),
                               ),
@@ -401,11 +420,18 @@ class _BookFormScreenState extends State<BookFormScreen> {
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white),
                                 )
                               : const Icon(Icons.save),
-                          label: Text(_saving ? 'Сохранение...' : (widget.isEditing ? 'Сохранить' : 'Создать книгу')),
-                          style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                          label: Text(_saving
+                              ? 'Сохранение...'
+                              : (widget.isEditing
+                                  ? 'Сохранить'
+                                  : 'Создать книгу')),
+                          style: FilledButton.styleFrom(
+                              padding:
+                                  const EdgeInsets.symmetric(vertical: 16)),
                           onPressed: _saving ? null : _submit,
                         ),
                       ],

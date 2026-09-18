@@ -27,11 +27,13 @@ class ReaderLoansScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.book, color: Colors.teal),
                     title: const Text('1984 — Джордж Оруэлл'),
-                    subtitle: const Text('Срок возврата: до 28 сентября 2026 г.'),
+                    subtitle:
+                        const Text('Срок возврата: до 28 сентября 2026 г.'),
                     trailing: OutlinedButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Срок продлен на 14 дней')),
+                          const SnackBar(
+                              content: Text('Срок продлен на 14 дней')),
                         );
                       },
                       child: const Text('Продлить'),
@@ -41,11 +43,13 @@ class ReaderLoansScreen extends StatelessWidget {
                   ListTile(
                     leading: const Icon(Icons.book, color: Colors.teal),
                     title: const Text('Мастер и Маргарита — М. Булгаков'),
-                    subtitle: const Text('Срок возврата: до 05 октября 2026 г.'),
+                    subtitle:
+                        const Text('Срок возврата: до 05 октября 2026 г.'),
                     trailing: OutlinedButton(
                       onPressed: () {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Срок продлен на 14 дней')),
+                          const SnackBar(
+                              content: Text('Срок продлен на 14 дней')),
                         );
                       },
                       child: const Text('Продлить'),

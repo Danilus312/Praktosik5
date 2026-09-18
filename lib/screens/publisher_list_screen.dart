@@ -25,7 +25,9 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
             'Невозможно удалить издательство "$name".\nК нему привязано $linkedBooks книг(и) в каталоге.\nСначала перенесите или удалите эти книги.',
           ),
           actions: [
-            FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('Понятно')),
+            FilledButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Понятно')),
           ],
         ),
       );
@@ -36,7 +38,9 @@ class _PublisherListScreenState extends State<PublisherListScreen> {
           title: const Text('Удаление издательства'),
           content: Text('Удалить издательство "$name"?'),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Отмена')),
+            TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: const Text('Отмена')),
             FilledButton(
               onPressed: () async {
                 repo.publishers.removeWhere((p) => p.id == publisherId);

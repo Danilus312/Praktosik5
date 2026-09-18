@@ -53,14 +53,16 @@ class EntityTable<T> extends StatelessWidget {
               child: DataTable(
                 showCheckboxColumn: onToggleSelect != null,
                 headingRowColor: WidgetStateProperty.all(
-                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                  theme.colorScheme.surfaceContainerHighest
+                      .withValues(alpha: 0.5),
                 ),
                 sortColumnIndex: _calculateSortColumnIndex(),
                 sortAscending: sortAscending,
                 columns: [
                   ...columns.map((c) {
                     return DataColumn(
-                      label: Text(c.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      label: Text(c.label,
+                          style: const TextStyle(fontWeight: FontWeight.bold)),
                       numeric: c.numeric,
                       onSort: c.sortField != null && onSort != null
                           ? (_, __) => onSort!(c.sortField!)
@@ -69,7 +71,8 @@ class EntityTable<T> extends StatelessWidget {
                   }),
                   if (actions != null)
                     const DataColumn(
-                      label: Text('Действия', style: TextStyle(fontWeight: FontWeight.bold)),
+                      label: Text('Действия',
+                          style: TextStyle(fontWeight: FontWeight.bold)),
                     ),
                 ],
                 rows: items.map((item) {
@@ -78,11 +81,15 @@ class EntityTable<T> extends StatelessWidget {
 
                   return DataRow(
                     selected: isSelected,
-                    onSelectChanged: onToggleSelect != null ? (_) => onToggleSelect!(id) : null,
+                    onSelectChanged: onToggleSelect != null
+                        ? (_) => onToggleSelect!(id)
+                        : null,
                     cells: [
                       ...columns.map((c) => DataCell(c.build(item))),
                       if (actions != null)
-                        DataCell(Row(mainAxisSize: MainAxisSize.min, children: actions!(item))),
+                        DataCell(Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: actions!(item))),
                     ],
                   );
                 }).toList(),

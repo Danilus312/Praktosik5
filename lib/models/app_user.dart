@@ -17,7 +17,8 @@ class AppUser {
     return AppUser(
       id: json['id'] as int? ?? 0,
       username: json['username'] as String? ?? '',
-      fullName: json['fullName'] as String? ?? json['username'] as String? ?? '',
+      fullName:
+          json['fullName'] as String? ?? json['username'] as String? ?? '',
       role: Role.fromString(json['role'] as String?),
     );
   }

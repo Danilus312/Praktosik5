@@ -32,6 +32,8 @@ class Genre {
   factory Genre.fromJson(Map<String, dynamic> json) => Genre(
         id: json['id'] as int? ?? 0,
         name: json['name'] as String? ?? '',
-        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+        deletedAt: json['deletedAt'] == null
+            ? null
+            : DateTime.tryParse(json['deletedAt'] as String),
       );
 }

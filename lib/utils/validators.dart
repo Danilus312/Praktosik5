@@ -1,5 +1,6 @@
 class AppValidators {
-  static String? requiredField(String? value, [String message = 'Поле обязательно для заполнения']) {
+  static String? requiredField(String? value,
+      [String message = 'Поле обязательно для заполнения']) {
     if (value == null || value.trim().isEmpty) {
       return message;
     }

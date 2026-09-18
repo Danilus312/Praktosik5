@@ -18,7 +18,8 @@ class CachedDictionaryRepository {
     try {
       final res = await _dio.get('/genres');
       final list = (res.data['items'] ?? res.data) as List;
-      _cachedGenres = list.map((e) => Genre.fromJson(e as Map<String, dynamic>)).toList();
+      _cachedGenres =
+          list.map((e) => Genre.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       _cachedGenres = [...seedGenres];
     }
@@ -30,7 +31,9 @@ class CachedDictionaryRepository {
     try {
       final res = await _dio.get('/publishers');
       final list = (res.data['items'] ?? res.data) as List;
-      _cachedPublishers = list.map((e) => Publisher.fromJson(e as Map<String, dynamic>)).toList();
+      _cachedPublishers = list
+          .map((e) => Publisher.fromJson(e as Map<String, dynamic>))
+          .toList();
     } catch (_) {
       _cachedPublishers = [...seedPublishers];
     }
@@ -42,7 +45,8 @@ class CachedDictionaryRepository {
     try {
       final res = await _dio.get('/authors');
       final list = (res.data['items'] ?? res.data) as List;
-      _cachedAuthors = list.map((e) => Author.fromJson(e as Map<String, dynamic>)).toList();
+      _cachedAuthors =
+          list.map((e) => Author.fromJson(e as Map<String, dynamic>)).toList();
     } catch (_) {
       _cachedAuthors = [...seedAuthors];
     }

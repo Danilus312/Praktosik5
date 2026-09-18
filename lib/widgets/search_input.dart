@@ -30,7 +30,8 @@ class _SearchInputState extends State<SearchInput> {
   @override
   void didUpdateWidget(covariant SearchInput oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialValue != widget.initialValue && widget.initialValue != _controller.text) {
+    if (oldWidget.initialValue != widget.initialValue &&
+        widget.initialValue != _controller.text) {
       _controller.text = widget.initialValue;
     }
   }

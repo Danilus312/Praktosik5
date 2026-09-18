@@ -41,10 +41,12 @@ void main() async {
         ),
         Provider<AuthorRepository>(create: (_) => InMemoryAuthorRepository()),
         ChangeNotifierProvider(
-          create: (context) => BookListNotifier(context.read<BookRepository>())..load(),
+          create: (context) =>
+              BookListNotifier(context.read<BookRepository>())..load(),
         ),
         ChangeNotifierProvider(
-          create: (context) => AuthorListNotifier(context.read<AuthorRepository>())..load(),
+          create: (context) =>
+              AuthorListNotifier(context.read<AuthorRepository>())..load(),
         ),
       ],
       child: const LibraryApp(),

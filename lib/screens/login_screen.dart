@@ -49,7 +49,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (e.response?.statusCode == 401) {
         setState(() => _errorMessage = 'Неверное имя пользователя или пароль');
       } else {
-        setState(() => _errorMessage = 'Ошибка подключения к серверу авторизации');
+        setState(
+            () => _errorMessage = 'Ошибка подключения к серверу авторизации');
       }
     } catch (e) {
       setState(() => _errorMessage = 'Сбой при авторизации: $e');
@@ -75,12 +76,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.local_library, size: 56, color: Colors.teal),
+                      const Icon(Icons.local_library,
+                          size: 56, color: Colors.teal),
                       const SizedBox(height: 16),
                       const Text(
                         'Вход в систему',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 8),
                       const Text(
@@ -125,9 +128,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           prefixIcon: Icon(Icons.lock),
                           border: OutlineInputBorder(),
                         ),
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Введите пароль'
-                            : null,
+                        validator: (v) =>
+                            (v == null || v.isEmpty) ? 'Введите пароль' : null,
                       ),
                       const SizedBox(height: 24),
                       FilledButton(
@@ -149,7 +151,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       const SizedBox(height: 16),
                       TextButton(
                         onPressed: () => context.go('/register'),
-                        child: const Text('Нет учетной записи? Зарегистрироваться'),
+                        child: const Text(
+                            'Нет учетной записи? Зарегистрироваться'),
                       ),
                     ],
                   ),

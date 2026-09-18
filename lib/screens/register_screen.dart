@@ -76,7 +76,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (e is DioException) {
       dynamic data = e.response?.data;
       if (data is String) {
-        try { data = jsonDecode(data); } catch (_) {}
+        try {
+          data = jsonDecode(data);
+        } catch (_) {}
       }
       if (data is Map && data['message'] != null) {
         return data['message'].toString();
@@ -94,7 +96,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (!_hasMinLength || !_hasDigit || !_hasSpecialChar) {
-      setState(() => _errorMessage = 'Пароль не удовлетворяет всем требованиям безопасности');
+      setState(() => _errorMessage =
+          'Пароль не удовлетворяет всем требованиям безопасности');
       return;
     }
 
@@ -133,12 +136,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Icon(Icons.person_add, size: 56, color: Colors.teal),
+                      const Icon(Icons.person_add,
+                          size: 56, color: Colors.teal),
                       const SizedBox(height: 16),
                       const Text(
                         'Регистрация читателя',
                         textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                        style: TextStyle(
+                            fontSize: 24, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 24),
                       if (_errorMessage != null) ...[
@@ -164,7 +169,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           prefixIcon: Icon(Icons.account_circle),
                           border: OutlineInputBorder(),
                         ),
-                        validator: (v) => (v == null || v.trim().length < 3) ? 'Минимум 3 символа' : null,
+                        validator: (v) => (v == null || v.trim().length < 3)
+                            ? 'Минимум 3 символа'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -174,7 +181,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           prefixIcon: Icon(Icons.badge),
                           border: OutlineInputBorder(),
                         ),
-                        validator: (v) => (v == null || v.trim().length < 3) ? 'Укажите фамилию и имя' : null,
+                        validator: (v) => (v == null || v.trim().length < 3)
+                            ? 'Укажите фамилию и имя'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -197,23 +206,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('Требования к паролю:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            const Text('Требования к паролю:',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.bold, fontSize: 13)),
                             const SizedBox(height: 6),
-                            _buildRuleItem('Длина не менее 8 символов', _hasMinLength),
-                            _buildRuleItem('Хотя бы одна цифра (0-9)', _hasDigit),
-                            _buildRuleItem('Хотя бы один спецсимвол (!@#\$%^&*)', _hasSpecialChar),
+                            _buildRuleItem(
+                                'Длина не менее 8 символов', _hasMinLength),
+                            _buildRuleItem(
+                                'Хотя бы одна цифра (0-9)', _hasDigit),
+                            _buildRuleItem(
+                                'Хотя бы один спецсимвол (!@#\$%^&*)',
+                                _hasSpecialChar),
                           ],
                         ),
                       ),
                       const SizedBox(height: 24),
                       FilledButton(
                         onPressed: _loading ? null : _submit,
-                        style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                        style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16)),
                         child: _loading
                             ? const SizedBox(
                                 width: 20,
                                 height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
                               )
                             : const Text('Создать аккаунт'),
                       ),

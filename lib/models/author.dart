@@ -51,6 +51,8 @@ class Author {
         lastName: json['lastName'] as String? ?? '',
         country: json['country'] as String? ?? '',
         birthYear: json['birthYear'] as int? ?? 1900,
-        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+        deletedAt: json['deletedAt'] == null
+            ? null
+            : DateTime.tryParse(json['deletedAt'] as String),
       );
 }

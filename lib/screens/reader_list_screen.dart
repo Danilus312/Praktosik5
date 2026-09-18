@@ -40,7 +40,8 @@ class _ReaderListScreenState extends State<ReaderListScreen> {
                   child: ListTile(
                     leading: const CircleAvatar(child: Icon(Icons.person)),
                     title: Text(r.fullName),
-                    subtitle: Text('Email: ${r.email} | Билет: ${r.card.cardNumber} (${r.card.isActive ? 'Активен' : 'Заблокирован'})'),
+                    subtitle: Text(
+                        'Email: ${r.email} | Билет: ${r.card.cardNumber} (${r.card.isActive ? 'Активен' : 'Заблокирован'})'),
                     trailing: IconButton(
                       icon: const Icon(Icons.edit),
                       onPressed: () => context.go('/readers/${r.id}/edit'),

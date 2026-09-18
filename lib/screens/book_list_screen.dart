@@ -9,6 +9,7 @@ import '../models/publisher.dart';
 import '../repositories/book_repository.dart';
 import '../repositories/cached_dictionary_repository.dart';
 import '../state/book_list_notifier.dart';
+import '../widgets/responsive_view.dart';
 
 class BookListScreen extends StatefulWidget {
   final Map<String, String>? queryParams;
@@ -89,7 +90,10 @@ class _BookListScreenState extends State<BookListScreen> {
   String _getGenreNames(List<int> genreIds) {
     if (genreIds.isEmpty) return '—';
     final names = genreIds
-        .map((id) => _genres.firstWhere((g) => g.id == id, orElse: () => Genre(id: id, name: 'Жанр #$id')).name)
+        .map((id) => _genres
+            .firstWhere((g) => g.id == id,
+                orElse: () => Genre(id: id, name: 'Жанр #$id'))
+            .name)
         .toList();
     return names.isEmpty ? '—' : names.join(', ');
   }
@@ -98,147 +102,187 @@ class _BookListScreenState extends State<BookListScreen> {
   Widget build(BuildContext context) {
     final notifier = context.watch<BookListNotifier>();
     final query = notifier.query;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Каталог книг'),
-        actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.table_chart),
-            label: const Text('Издательства'),
-            onPressed: () {},
-          ),
-          TextButton.icon(
-            icon: const Icon(Icons.badge),
-            label: const Text('Читатели'),
-            onPressed: () {},
-          ),
-          TextButton.icon(
-            icon: const Icon(Icons.people),
-            label: const Text('Авторы'),
-            onPressed: () {},
-          ),
-          const SizedBox(width: 8),
-          FilledButton.icon(
-            icon: const Icon(Icons.add),
-            label: const Text('Новая книга'),
-            onPressed: () => context.go('/books/new'),
-          ),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: 'Обновить данные',
-            icon: const Icon(Icons.refresh),
-            onPressed: () => notifier.reload(),
-          ),
-          const SizedBox(width: 16),
-        ],
+        actions: _buildResponsiveAppBarActions(context, screenWidth, notifier),
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              children: [
-                Row(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: InputDecoration(
-                          prefixIcon: const Icon(Icons.search),
-                          hintText: 'Поиск по названию или ISBN...',
-                          border: const OutlineInputBorder(),
-                          suffixIcon: _searchController.text.isNotEmpty
-                              ? IconButton(
-                                  icon: const Icon(Icons.clear),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _onSearchChanged('');
-                                  },
-                                )
-                              : null,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search),
+                              hintText: 'Поиск по названию или ISBN...',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _onSearchChanged('');
+                                      },
+                                    )
+                                  : null,
+                            ),
+                            onChanged: _onSearchChanged,
+                          ),
                         ),
-                        onChanged: _onSearchChanged,
-                      ),
+                        const SizedBox(width: 12),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor:
+                                query.showDeleted ? Colors.grey.shade300 : null,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 16),
+                          ),
+                          onPressed: () {
+                            notifier.updateQuery(
+                              (q) => q.copyWith(
+                                  showDeleted: !q.showDeleted, page: 1),
+                            );
+                          },
+                          child: const Text('Удалённые'),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 12),
-                    OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: query.showDeleted ? Colors.grey.shade300 : null,
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          DropdownButton<int?>(
+                            value: query.genreId,
+                            hint: const Text('Все жанры'),
+                            items: [
+                              const DropdownMenuItem(
+                                  value: null, child: Text('Все жанры')),
+                              ..._genres.map((g) => DropdownMenuItem(
+                                  value: g.id, child: Text(g.name))),
+                            ],
+                            onChanged: (val) {
+                              notifier.updateQuery(
+                                  (q) => q.copyWith(genreId: val, page: 1));
+                            },
+                          ),
+                          DropdownButton<int?>(
+                            value: query.publisherId,
+                            hint: const Text('Все издательства'),
+                            items: [
+                              const DropdownMenuItem(
+                                  value: null, child: Text('Все издательства')),
+                              ..._publishers.map((p) => DropdownMenuItem(
+                                  value: p.id, child: Text(p.name))),
+                            ],
+                            onChanged: (val) {
+                              notifier.updateQuery(
+                                  (q) => q.copyWith(publisherId: val, page: 1));
+                            },
+                          ),
+                          SizedBox(
+                            width: 100,
+                            child: TextField(
+                              controller: _yearFromController,
+                              decoration: const InputDecoration(
+                                  labelText: 'Год от',
+                                  border: OutlineInputBorder(),
+                                  isDense: true),
+                              keyboardType: TextInputType.number,
+                              onSubmitted: (v) {
+                                notifier.updateQuery((q) => q.copyWith(
+                                    yearFrom: int.tryParse(v), page: 1));
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 100,
+                            child: TextField(
+                              controller: _yearToController,
+                              decoration: const InputDecoration(
+                                  labelText: 'Год до',
+                                  border: OutlineInputBorder(),
+                                  isDense: true),
+                              keyboardType: TextInputType.number,
+                              onSubmitted: (v) {
+                                notifier.updateQuery((q) => q.copyWith(
+                                    yearTo: int.tryParse(v), page: 1));
+                              },
+                            ),
+                          ),
+                        ],
                       ),
-                      onPressed: () {
-                        notifier.updateQuery(
-                          (q) => q.copyWith(showDeleted: !q.showDeleted, page: 1),
-                        );
-                      },
-                      child: const Text('Удалённые'),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    const Spacer(),
-                    DropdownButton<int?>(
-                      value: query.genreId,
-                      hint: const Text('Все жанры'),
-                      items: [
-                        const DropdownMenuItem(value: null, child: Text('Все жанры')),
-                        ..._genres.map((g) => DropdownMenuItem(value: g.id, child: Text(g.name))),
-                      ],
-                      onChanged: (val) {
-                        notifier.updateQuery((q) => q.copyWith(genreId: val, page: 1));
-                      },
-                    ),
-                    const SizedBox(width: 16),
-                    DropdownButton<int?>(
-                      value: query.publisherId,
-                      hint: const Text('Все издательства'),
-                      items: [
-                        const DropdownMenuItem(value: null, child: Text('Все издательства')),
-                        ..._publishers.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
-                      ],
-                      onChanged: (val) {
-                        notifier.updateQuery((q) => q.copyWith(publisherId: val, page: 1));
-                      },
-                    ),
-                    const SizedBox(width: 16),
-                    SizedBox(
-                      width: 90,
-                      child: TextField(
-                        controller: _yearFromController,
-                        decoration: const InputDecoration(labelText: 'Год от', border: OutlineInputBorder()),
-                        keyboardType: TextInputType.number,
-                        onSubmitted: (v) {
-                          notifier.updateQuery((q) => q.copyWith(yearFrom: int.tryParse(v), page: 1));
-                        },
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    SizedBox(
-                      width: 90,
-                      child: TextField(
-                        controller: _yearToController,
-                        decoration: const InputDecoration(labelText: 'Год до', border: OutlineInputBorder()),
-                        keyboardType: TextInputType.number,
-                        onSubmitted: (v) {
-                          notifier.updateQuery((q) => q.copyWith(yearTo: int.tryParse(v), page: 1));
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: _buildContent(context, notifier),
+              ),
+            ],
           ),
-          const Divider(height: 1),
-          Expanded(
-            child: _buildContent(context, notifier),
-          ),
-        ],
+        ),
       ),
     );
+  }
+
+  List<Widget> _buildResponsiveAppBarActions(
+      BuildContext context, double screenWidth, BookListNotifier notifier) {
+    if (screenWidth < 768) {
+      return [
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'Новая книга',
+          onPressed: () => context.go('/books/new'),
+        ),
+        PopupMenuButton<String>(
+          onSelected: (route) {
+            if (route == 'reload') {
+              notifier.reload();
+            } else {
+              context.go(route);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+                value: '/books/new', child: Text('Новая книга')),
+            const PopupMenuItem(value: '/', child: Text('Главная')),
+            const PopupMenuItem(value: 'reload', child: Text('Обновить')),
+          ],
+        ),
+        const SizedBox(width: 8),
+      ];
+    }
+
+    return [
+      FilledButton.icon(
+        icon: const Icon(Icons.add),
+        label: const Text('Новая книга'),
+        onPressed: () => context.go('/books/new'),
+      ),
+      const SizedBox(width: 8),
+      IconButton(
+        tooltip: 'Обновить данные',
+        icon: const Icon(Icons.refresh),
+        onPressed: () => notifier.reload(),
+      ),
+      const SizedBox(width: 16),
+    ];
   }
 
   Widget _buildContent(BuildContext context, BookListNotifier notifier) {
@@ -310,75 +354,150 @@ class _BookListScreenState extends State<BookListScreen> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: SizedBox(
-              width: double.infinity,
-              child: DataTable(
-                sortColumnIndex: _getSortColumnIndex(notifier.query.sortField),
-                sortAscending: notifier.query.sortAscending,
-                columns: [
-                  DataColumn(
-                    label: const Text('Название'),
-                    onSort: (_, asc) => _changeSort('title', asc),
-                  ),
-                  const DataColumn(label: Text('ISBN')),
-                  DataColumn(
-                    label: const Text('Год'),
-                    onSort: (_, asc) => _changeSort('year', asc),
-                  ),
-                  DataColumn(
-                    label: const Text('Страниц'),
-                    onSort: (_, asc) => _changeSort('pages', asc),
-                  ),
-                  const DataColumn(label: Text('Жанры')),
-                  const DataColumn(label: Text('Действия')),
-                ],
-                rows: notifier.items.map((book) {
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(book.title)),
-                      DataCell(Text(book.isbn)),
-                      DataCell(Text('${book.year}')),
-                      DataCell(Text('${book.pages}')),
-                      DataCell(Text(_getGenreNames(book.genreIds))),
-                      DataCell(
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blue),
-                              tooltip: 'Редактировать',
-                              onPressed: () => context.go('/books/${book.id}/edit'),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_outline, color: Colors.orange),
-                              tooltip: 'В корзину',
-                              onPressed: () async {
-                                await context.read<BookRepository>().softDelete(book.id);
-                                notifier.reload();
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete_forever, color: Colors.red),
-                              tooltip: 'Удалить навсегда',
-                              onPressed: () async {
-                                await context.read<BookRepository>().hardDelete(book.id);
-                                notifier.reload();
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  );
-                }).toList(),
-              ),
-            ),
+          child: ResponsiveView(
+            breakpoint: 768,
+            mobileCards: _buildMobileCards(context, notifier),
+            desktopTable: _buildDesktopTable(context, notifier),
           ),
         ),
         _buildPaginationBar(context, notifier),
       ],
+    );
+  }
+
+  Widget _buildMobileCards(BuildContext context, BookListNotifier notifier) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(12),
+      itemCount: notifier.items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final book = notifier.items[index];
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        book.title,
+                        style: const TextStyle(
+                            fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit,
+                              color: Colors.blue, size: 20),
+                          onPressed: () => context.go('/books/${book.id}/edit'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline,
+                              color: Colors.orange, size: 20),
+                          onPressed: () async {
+                            await context
+                                .read<BookRepository>()
+                                .softDelete(book.id);
+                            notifier.reload();
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('ISBN: ${book.isbn}',
+                    style: const TextStyle(color: Colors.black87)),
+                Text('Год: ${book.year} | Страниц: ${book.pages}',
+                    style: const TextStyle(color: Colors.black54)),
+                Text('Жанры: ${_getGenreNames(book.genreIds)}',
+                    style: const TextStyle(color: Colors.black54)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopTable(BuildContext context, BookListNotifier notifier) {
+    return SizedBox(
+      width: double.infinity,
+      child: DataTable(
+        sortColumnIndex: _getSortColumnIndex(notifier.query.sortField),
+        sortAscending: notifier.query.sortAscending,
+        columns: [
+          DataColumn(
+            label: const Text('Название'),
+            onSort: (_, asc) => _changeSort('title', asc),
+          ),
+          const DataColumn(label: Text('ISBN')),
+          DataColumn(
+            label: const Text('Год'),
+            onSort: (_, asc) => _changeSort('year', asc),
+          ),
+          DataColumn(
+            label: const Text('Страниц'),
+            onSort: (_, asc) => _changeSort('pages', asc),
+          ),
+          const DataColumn(label: Text('Жанры')),
+          const DataColumn(label: Text('Действия')),
+        ],
+        rows: notifier.items.map((book) {
+          return DataRow(
+            cells: [
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: Text(book.title, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              DataCell(Text(book.isbn)),
+              DataCell(Text('${book.year}')),
+              DataCell(Text('${book.pages}')),
+              DataCell(Text(_getGenreNames(book.genreIds))),
+              DataCell(
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      tooltip: 'Редактировать',
+                      onPressed: () => context.go('/books/${book.id}/edit'),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline,
+                          color: Colors.orange),
+                      tooltip: 'В корзину',
+                      onPressed: () async {
+                        await context
+                            .read<BookRepository>()
+                            .softDelete(book.id);
+                        notifier.reload();
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_forever, color: Colors.red),
+                      tooltip: 'Удалить навсегда',
+                      onPressed: () async {
+                        await context
+                            .read<BookRepository>()
+                            .hardDelete(book.id);
+                        notifier.reload();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -397,7 +516,8 @@ class _BookListScreenState extends State<BookListScreen> {
 
   void _changeSort(String field, bool ascending) {
     context.read<BookListNotifier>().updateQuery(
-          (q) => q.copyWith(sortField: field, sortAscending: ascending, page: 1),
+          (q) =>
+              q.copyWith(sortField: field, sortAscending: ascending, page: 1),
         );
   }
 
@@ -411,50 +531,63 @@ class _BookListScreenState extends State<BookListScreen> {
         color: Colors.grey.shade100,
         border: Border(top: BorderSide(color: Colors.grey.shade300)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
         children: [
-          const Text('Строк: '),
-          DropdownButton<int>(
-            value: query.size,
-            items: const [
-              DropdownMenuItem(value: 5, child: Text('5')),
-              DropdownMenuItem(value: 10, child: Text('10')),
-              DropdownMenuItem(value: 20, child: Text('20')),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Строк: '),
+              DropdownButton<int>(
+                value: query.size,
+                items: const [
+                  DropdownMenuItem(value: 5, child: Text('5')),
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 20, child: Text('20')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    notifier.updateQuery((q) => q.copyWith(size: val, page: 1));
+                  }
+                },
+              ),
             ],
-            onChanged: (val) {
-              if (val != null) {
-                notifier.updateQuery((q) => q.copyWith(size: val, page: 1));
-              }
-            },
           ),
-          const SizedBox(width: 24),
           Text('Всего: ${notifier.total}'),
-          const SizedBox(width: 24),
-          IconButton(
-            icon: const Icon(Icons.first_page),
-            onPressed: query.page > 1
-                ? () => notifier.updateQuery((q) => q.copyWith(page: 1))
-                : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.chevron_left),
-            onPressed: query.page > 1
-                ? () => notifier.updateQuery((q) => q.copyWith(page: q.page - 1))
-                : null,
-          ),
-          Text('Стр. ${query.page} из $totalPages'),
-          IconButton(
-            icon: const Icon(Icons.chevron_right),
-            onPressed: query.page < totalPages
-                ? () => notifier.updateQuery((q) => q.copyWith(page: q.page + 1))
-                : null,
-          ),
-          IconButton(
-            icon: const Icon(Icons.last_page),
-            onPressed: query.page < totalPages
-                ? () => notifier.updateQuery((q) => q.copyWith(page: totalPages))
-                : null,
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.first_page),
+                onPressed: query.page > 1
+                    ? () => notifier.updateQuery((q) => q.copyWith(page: 1))
+                    : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: query.page > 1
+                    ? () => notifier
+                        .updateQuery((q) => q.copyWith(page: q.page - 1))
+                    : null,
+              ),
+              Text('Стр. ${query.page} из $totalPages'),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: query.page < totalPages
+                    ? () => notifier
+                        .updateQuery((q) => q.copyWith(page: q.page + 1))
+                    : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.last_page),
+                onPressed: query.page < totalPages
+                    ? () => notifier
+                        .updateQuery((q) => q.copyWith(page: totalPages))
+                    : null,
+              ),
+            ],
           ),
         ],
       ),

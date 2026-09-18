@@ -42,9 +42,11 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
 
     _fullNameController = TextEditingController(text: existing?.fullName ?? '');
     _emailController = TextEditingController(text: existing?.email ?? '');
-    _phoneController = TextEditingController(text: existing?.phone ?? '+7 (999) ');
+    _phoneController =
+        TextEditingController(text: existing?.phone ?? '+7 (999) ');
     _cardNumberController = TextEditingController(
-      text: existing?.card.cardNumber ?? 'LC-${DateTime.now().millisecondsSinceEpoch % 10000}',
+      text: existing?.card.cardNumber ??
+          'LC-${DateTime.now().millisecondsSinceEpoch % 10000}',
     );
     _cardIsActive = existing?.card.isActive ?? true;
   }
@@ -59,7 +61,8 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
 
     final emailVal = _emailController.text.trim();
     if (!repo.isEmailUnique(emailVal, widget.id)) {
-      setState(() => _emailCustomError = 'Читатель с таким email уже существует');
+      setState(
+          () => _emailCustomError = 'Читатель с таким email уже существует');
       return;
     }
 
@@ -83,7 +86,10 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
     if (!mounted) return;
     _isDirty = false;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(widget.isEditing ? 'Данные читателя обновлены' : 'Читатель зарегистрирован')),
+      SnackBar(
+          content: Text(widget.isEditing
+              ? 'Данные читателя обновлены'
+              : 'Читатель зарегистрирован')),
     );
     context.go('/readers');
   }
@@ -92,7 +98,8 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.isEditing ? 'Редактирование читателя' : 'Новый читатель'),
+        title: Text(
+            widget.isEditing ? 'Редактирование читателя' : 'Новый читатель'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => context.go('/readers'),
@@ -115,8 +122,12 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
                     children: [
                       TextFormField(
                         controller: _fullNameController,
-                        decoration: const InputDecoration(labelText: 'ФИО читателя *', border: OutlineInputBorder()),
-                        validator: (v) => AppValidators.requiredField(v) ?? AppValidators.minLength(v, 3),
+                        decoration: const InputDecoration(
+                            labelText: 'ФИО читателя *',
+                            border: OutlineInputBorder()),
+                        validator: (v) =>
+                            AppValidators.requiredField(v) ??
+                            AppValidators.minLength(v, 3),
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
@@ -131,24 +142,31 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _phoneController,
-                        decoration: const InputDecoration(labelText: 'Телефон *', border: OutlineInputBorder()),
+                        decoration: const InputDecoration(
+                            labelText: 'Телефон *',
+                            border: OutlineInputBorder()),
                         validator: AppValidators.requiredField,
                       ),
                       const SizedBox(height: 24),
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                          border: Border.all(
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Читательский билет (Связь 1:1)', style: Theme.of(context).textTheme.titleSmall),
+                            Text('Читательский билет (Связь 1:1)',
+                                style: Theme.of(context).textTheme.titleSmall),
                             const SizedBox(height: 12),
                             TextFormField(
                               controller: _cardNumberController,
-                              decoration: const InputDecoration(labelText: 'Номер билета *', border: OutlineInputBorder()),
+                              decoration: const InputDecoration(
+                                  labelText: 'Номер билета *',
+                                  border: OutlineInputBorder()),
                               validator: AppValidators.requiredField,
                             ),
                             const SizedBox(height: 12),
@@ -166,8 +184,11 @@ class _ReaderFormScreenState extends State<ReaderFormScreen> {
                       const SizedBox(height: 24),
                       FilledButton.icon(
                         icon: const Icon(Icons.save),
-                        label: Text(widget.isEditing ? 'Сохранить' : 'Зарегистрировать читателя'),
-                        style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                        label: Text(widget.isEditing
+                            ? 'Сохранить'
+                            : 'Зарегистрировать читателя'),
+                        style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 16)),
                         onPressed: _submit,
                       ),
                     ],

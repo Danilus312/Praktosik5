@@ -1,0 +1,5400 @@
+﻿# This file configures the analyzer, which statically analyzes Dart code to
+# check for errors, warnings, and lints.
+#
+# The issues identified by the analyzer are surfaced in the UI of Dart-enabled
+# IDEs (https://dart.dev/tools#ides-and-editors). The analyzer can also be
+# invoked from the command line by running `flutter analyze`.
+
+# The following line activates a set of recommended lints for Flutter apps,
+# packages, and plugins designed to encourage good coding practices.
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  # The lint rules applied to this project can be customized in the
+  # section below to disable rules from the `package:flutter_lints/flutter.yaml`
+  # included above or to enable additional rules. A list of all available lints
+  # and their documentation is published at https://dart.dev/lints.
+  #
+  # Instead of disabling a lint rule for the entire project in the
+  # section below, it can also be suppressed for a single line of code
+  # or a specific dart file by using the `// ignore: name_of_lint` and
+  # `// ignore_for_file: name_of_lint` syntax on the line or in the file
+  # producing the lint.
+  rules:
+    # avoid_print: false  # Uncomment to disable the `avoid_print` rule
+    # prefer_single_quotes: true  # Uncomment to enable the `prefer_single_quotes` rule
+
+# Additional information about this file can be found at
+# https://dart.dev/guides/language/analysis-options
+const http = require('http');
+const url = require('url');
+
+const PORT = 8080;
+
+let ttlSeconds = 900;
+const ttlIndex = process.argv.indexOf('--ttl');
+if (ttlIndex !== -1 && process.argv[ttlIndex + 1]) {
+  ttlSeconds = parseInt(process.argv[ttlIndex + 1], 10) || 900;
+}
+
+let users = [
+  { id: 1, username: 'admin', password: 'password123', fullName: 'РЎРёСЃС‚РµРјРЅС‹Р№ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ', role: 'admin' },
+  { id: 2, username: 'librarian', password: 'password123', fullName: 'РРІР°РЅРѕРІР° РњР°СЂРёСЏ РЎРµСЂРіРµРµРІРЅР°', role: 'librarian' },
+  { id: 3, username: 'reader', password: 'password123', fullName: 'РџРµС‚СЂРѕРІ РђР»РµРєСЃРµР№ Р’РёРєС‚РѕСЂРѕРІРёС‡', role: 'reader' }
+];
+
+let refreshTokensDb = new Set();
+
+let books = [
+  { id: 1, title: 'Р’РѕР№РЅР° Рё РјРёСЂ', isbn: '978-5-389-06256-6', year: 1869, pages: 1225, genreIds: [1, 5], publisherId: 1, authorIds: [1], isDeleted: false },
+  { id: 2, title: '1984', isbn: '978-5-17-080115-2', year: 1949, pages: 320, genreIds: [2, 3], publisherId: 2, authorIds: [2], isDeleted: false },
+  { id: 3, title: 'РњР°СЃС‚РµСЂ Рё РњР°СЂРіР°СЂРёС‚Р°', isbn: '978-5-389-01686-6', year: 1967, pages: 512, genreIds: [1, 4], publisherId: 1, authorIds: [3], isDeleted: false },
+  { id: 4, title: 'РџСЂРµСЃС‚СѓРїР»РµРЅРёРµ Рё РЅР°РєР°Р·Р°РЅРёРµ', isbn: '978-5-389-07446-0', year: 1866, pages: 672, genreIds: [1, 6], publisherId: 1, authorIds: [4], isDeleted: false },
+  { id: 5, title: '451 РіСЂР°РґСѓСЃ РїРѕ Р¤Р°СЂРµРЅРіРµР№С‚Сѓ', isbn: '978-5-17-077750-1', year: 1953, pages: 256, genreIds: [2, 3], publisherId: 2, authorIds: [5], isDeleted: false }
+];
+
+let publishers = [
+  { id: 1, name: 'РђР·Р±СѓРєР°-РђС‚С‚РёРєСѓСЃ', city: 'РЎР°РЅРєС‚-РџРµС‚РµСЂР±СѓСЂРі' },
+  { id: 2, name: 'РђРЎРў', city: 'РњРѕСЃРєРІР°' }
+];
+
+let genres = [
+  { id: 1, name: 'РљР»Р°СЃСЃРёРєР°' }, { id: 2, name: 'РђРЅС‚РёСѓС‚РѕРїРёСЏ' }, { id: 3, name: 'Р¤Р°РЅС‚Р°СЃС‚РёРєР°' },
+  { id: 4, name: 'РњР°РіРёС‡РµСЃРєРёР№ СЂРµР°Р»РёР·Рј' }, { id: 5, name: 'РСЃС‚РѕСЂРёС‡РµСЃРєРёР№' }, { id: 6, name: 'Р¤РёР»РѕСЃРѕС„РёСЏ' }
+];
+
+let authors = [
+  { id: 1, firstName: 'Р›РµРІ', lastName: 'РўРѕР»СЃС‚РѕР№', country: 'Р РѕСЃСЃРёСЏ', birthYear: 1828 },
+  { id: 2, firstName: 'Р”Р¶РѕСЂРґР¶', lastName: 'РћСЂСѓСЌР»Р»', country: 'Р’РµР»РёРєРѕР±СЂРёС‚Р°РЅРёСЏ', birthYear: 1903 },
+  { id: 3, firstName: 'РњРёС…Р°РёР»', lastName: 'Р‘СѓР»РіР°РєРѕРІ', country: 'Р РѕСЃСЃРёСЏ', birthYear: 1891 },
+  { id: 4, firstName: 'Р¤С‘РґРѕСЂ', lastName: 'Р”РѕСЃС‚РѕРµРІСЃРєРёР№', country: 'Р РѕСЃСЃРёСЏ', birthYear: 1821 },
+  { id: 5, firstName: 'Р СЌР№', lastName: 'Р‘СЂСЌРґР±РµСЂРё', country: 'РЎРЁРђ', birthYear: 1920 }
+];
+
+function generateAccessToken(user) {
+  const payload = {
+    id: user.id,
+    username: user.username,
+    fullName: user.fullName,
+    role: user.role,
+    exp: Date.now() + ttlSeconds * 1000
+  };
+  return Buffer.from(JSON.stringify(payload)).toString('base64');
+}
+
+function verifyAccessToken(token) {
+  try {
+    const raw = Buffer.from(token, 'base64').toString('utf8');
+    const payload = JSON.parse(raw);
+    if (!payload.exp || Date.now() > payload.exp) return null;
+    return payload;
+  } catch (_) {
+    return null;
+  }
+}
+
+const server = http.createServer((req, res) => {
+  const corsHeaders = {
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  };
+
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, corsHeaders);
+    res.end();
+    return;
+  }
+
+  const parsedUrl = url.parse(req.url, true);
+  const cleanPath = (parsedUrl.pathname || '').replace(/^\/api/, '').replace(/\/+$/, '');
+  const query = parsedUrl.query;
+  const delay = parseInt(query.__delay || '0', 10);
+  const fail = parseInt(query.__fail || '0', 10);
+
+  let body = '';
+  req.on('data', chunk => { body += chunk; });
+  req.on('end', () => {
+    setTimeout(() => {
+      function sendJson(code, obj) {
+        console.log(`[HTTP] ${req.method} ${parsedUrl.pathname} -> ${code}`);
+        res.writeHead(code, {
+          ...corsHeaders,
+          'Content-Type': 'application/json; charset=utf-8'
+        });
+        res.end(JSON.stringify(obj));
+      }
+
+      if (fail > 0) {
+        return sendJson(fail, { message: `РЎРµСЂРІРµСЂРЅР°СЏ РѕС€РёР±РєР° ${fail}` });
+      }
+
+      let data = {};
+      if (body) {
+        try { data = JSON.parse(body); } catch (_) {}
+      }
+
+      const authHeader = req.headers['authorization'];
+      let currentUser = null;
+      if (authHeader && authHeader.startsWith('Bearer ')) {
+        currentUser = verifyAccessToken(authHeader.substring(7));
+      }
+
+      // Р РµРіРёСЃС‚СЂР°С†РёСЏ
+      if (cleanPath === '/auth/register' && req.method === 'POST') {
+        const username = (data.username || '').trim();
+        const password = (data.password || '').trim();
+        const fullName = (data.fullName || '').trim() || username;
+
+        if (!username || !password) {
+          return sendJson(400, { message: 'Р—Р°РїРѕР»РЅРёС‚Рµ Р»РѕРіРёРЅ Рё РїР°СЂРѕР»СЊ' });
+        }
+        if (users.find(u => u.username.toLowerCase() === username.toLowerCase())) {
+          return sendJson(409, { message: 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃ С‚Р°РєРёРј Р»РѕРіРёРЅРѕРј СѓР¶Рµ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ' });
+        }
+
+        const newUser = {
+          id: users.length + 1,
+          username,
+          password,
+          fullName,
+          role: 'reader'
+        };
+        users.push(newUser);
+
+        const accessToken = generateAccessToken(newUser);
+        const refreshToken = 'rt_' + Math.random().toString(36).substring(2) + Date.now();
+        refreshTokensDb.add(refreshToken);
+
+        return sendJson(200, {
+          accessToken,
+          refreshToken,
+          user: { id: newUser.id, username: newUser.username, fullName: newUser.fullName, role: newUser.role }
+        });
+      }
+
+      // Р’С…РѕРґ
+      if (cleanPath === '/auth/login' && req.method === 'POST') {
+        const username = (data.username || '').trim().toLowerCase();
+        const password = (data.password || '').trim();
+
+        const user = users.find(u => u.username.toLowerCase() === username && u.password === password);
+        if (!user) {
+          return sendJson(401, { message: 'РќРµРІРµСЂРЅРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РёР»Рё РїР°СЂРѕР»СЊ' });
+        }
+
+        const accessToken = generateAccessToken(user);
+        const refreshToken = 'rt_' + Math.random().toString(36).substring(2) + Date.now();
+        refreshTokensDb.add(refreshToken);
+
+        return sendJson(200, {
+          accessToken,
+          refreshToken,
+          user: { id: user.id, username: user.username, fullName: user.fullName, role: user.role }
+        });
+      }
+
+      // РџСЂРѕРІРµСЂРєР° СЃРµСЃСЃРёРё
+      if (cleanPath === '/auth/me' && req.method === 'GET') {
+        if (!currentUser) {
+          return sendJson(401, { message: 'РўРѕРєРµРЅ РёСЃС‚РµРє РёР»Рё РЅРµРґРµР№СЃС‚РІРёС‚РµР»РµРЅ' });
+        }
+        return sendJson(200, {
+          id: currentUser.id,
+          username: currentUser.username,
+          fullName: currentUser.fullName,
+          role: currentUser.role
+        });
+      }
+
+      // РћР±РЅРѕРІР»РµРЅРёРµ С‚РѕРєРµРЅР°
+      if (cleanPath === '/auth/refresh' && req.method === 'POST') {
+        const { refreshToken } = data;
+        if (!refreshToken || !refreshTokensDb.has(refreshToken)) {
+          return sendJson(401, { message: 'РќРµРґРµР№СЃС‚РІРёС‚РµР»СЊРЅС‹Р№ С‚РѕРєРµРЅ РѕР±РЅРѕРІР»РµРЅРёСЏ' });
+        }
+        const user = users[0];
+        const newAccess = generateAccessToken(user);
+        return sendJson(200, { accessToken: newAccess, refreshToken });
+      }
+
+      // РЎРїСЂР°РІРѕС‡РЅРёРєРё
+      if (cleanPath === '/publishers' && req.method === 'GET') return sendJson(200, publishers);
+      if (cleanPath === '/genres' && req.method === 'GET') return sendJson(200, genres);
+      if (cleanPath === '/authors' && req.method === 'GET') return sendJson(200, authors);
+
+      // РљРЅРёРіРё
+      if (cleanPath === '/books' && req.method === 'GET') {
+        let result = books.filter(b => query.deleted === 'true' ? b.isDeleted : !b.isDeleted);
+        if (query.search) {
+          const s = query.search.toLowerCase();
+          result = result.filter(b => b.title.toLowerCase().includes(s) || b.isbn.includes(s));
+        }
+        if (query.genreId) result = result.filter(b => b.genreIds.includes(parseInt(query.genreId, 10)));
+        if (query.publisherId) result = result.filter(b => b.publisherId === parseInt(query.publisherId, 10));
+        if (query.yearFrom) result = result.filter(b => b.year >= parseInt(query.yearFrom, 10));
+        if (query.yearTo) result = result.filter(b => b.year <= parseInt(query.yearTo, 10));
+
+        const page = parseInt(query.page || '1', 10);
+        const size = parseInt(query.size || '10', 10);
+        const start = (page - 1) * size;
+
+        return sendJson(200, {
+          items: result.slice(start, start + size),
+          total: result.length,
+          page,
+          size
+        });
+      }
+
+      // РџСѓРЅРєС‚ 17: РџСЂРѕРІРµСЂРєР° РїСЂР°РІ РЅР° СЃС‚РѕСЂРѕРЅРµ СЃРµСЂРІРµСЂР° (Р§РёС‚Р°С‚РµР»СЋ Р·Р°РїСЂРµС‰РµРЅРѕ РјРѕРґРёС„РёС†РёСЂРѕРІР°С‚СЊ РєРЅРёРіРё)
+      if (cleanPath.startsWith('/books') && (req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE')) {
+        if (currentUser && currentUser.role === 'reader') {
+          return sendJson(403, { message: 'Р”РѕСЃС‚СѓРї Р·Р°РїСЂРµС‰РµРЅ: Сѓ СЂРѕР»Рё В«Р§РёС‚Р°С‚РµР»СЊВ» РЅРµС‚ РїСЂР°РІ РЅР° РјРѕРґРёС„РёРєР°С†РёСЋ С„РѕРЅРґР°' });
+        }
+      }
+
+      if (cleanPath === '/books' && req.method === 'POST') {
+        if (books.some(b => b.isbn === data.isbn && !b.isDeleted)) {
+          return sendJson(422, { field: 'isbn', message: 'РљРЅРёРіР° СЃ С‚Р°РєРёРј ISBN СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚ РЅР° СЃРµСЂРІРµСЂРµ' });
+        }
+        const newBook = { id: books.length + 1, ...data, isDeleted: false };
+        books.push(newBook);
+        return sendJson(201, newBook);
+      }
+
+      if (cleanPath.match(/^\/books\/\d+$/) && req.method === 'DELETE') {
+        const id = parseInt(cleanPath.split('/').pop(), 10);
+        const book = books.find(b => b.id === id);
+        if (book) book.isDeleted = true;
+        return sendJson(200, { success: true });
+      }
+
+      sendJson(404, { message: `РњР°СЂС€СЂСѓС‚ РЅРµ РЅР°Р№РґРµРЅ: ${req.method} ${parsedUrl.pathname}` });
+    }, delay);
+  });
+});
+
+server.listen(PORT, () => {
+  console.log(`[SERVER] Mock-СЃРµСЂРІРµСЂ СЃР»СѓС€Р°РµС‚ http://localhost:${PORT} (TTL С‚РѕРєРµРЅР°: ${ttlSeconds} СЃРµРє)`);
+});
+name: library_web
+description: "Р‘РёР±Р»РёРѕС‚РµС‡РЅР°СЏ СЃРёСЃС‚РµРјР° - РџР 3"
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_web_plugins:
+    sdk: flutter
+  provider: ^6.1.2
+  go_router: ^14.0.0
+  shared_preferences: ^2.2.2
+  dio: ^5.4.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+# library_web
+
+A new Flutter project.
+
+## Getting Started
+
+This project is a starting point for a Flutter application.
+
+A few resources to get you started if this is your first Flutter project:
+
+- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
+- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+
+For help getting started with Flutter development, view the
+[online documentation](https://docs.flutter.dev/), which offers tutorials,
+samples, guidance on mobile development, and a full API reference.
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Analyze code
+        run: flutter analyze
+
+      - name: Run all tests
+        run: flutter test
+
+      - name: Build Web (WASM & Release)
+        run: flutter build web --release --wasm --base-href /Praktosik5/ --dart-define=API_BASE_URL=http://localhost:8080/api
+
+      - name: Setup SPA 404 redirect for GitHub Pages
+        run: cp build/web/index.html build/web/404.html
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./build/web
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'core/api_client.dart';
+import 'repositories/api_book_repository.dart';
+import 'repositories/author_repository.dart';
+import 'repositories/book_repository.dart';
+import 'repositories/cached_dictionary_repository.dart';
+import 'repositories/in_memory_author_repository.dart';
+import 'router.dart';
+import 'state/auth_notifier.dart';
+import 'state/author_list_notifier.dart';
+import 'state/book_list_notifier.dart';
+import 'widgets/inactivity_watcher.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  usePathUrlStrategy();
+
+  final prefs = await SharedPreferences.getInstance();
+  final basicDio = buildDio(authNotifier: null);
+  final authNotifier = AuthNotifier(prefs, basicDio);
+
+  await authNotifier.restore();
+
+  final authenticatedDio = buildDio(authNotifier: authNotifier);
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthNotifier>.value(value: authNotifier),
+        Provider<Dio>.value(value: authenticatedDio),
+        Provider<CachedDictionaryRepository>(
+          create: (context) => CachedDictionaryRepository(context.read<Dio>()),
+        ),
+        Provider<BookRepository>(
+          create: (context) => ApiBookRepository(context.read<Dio>()),
+        ),
+        Provider<AuthorRepository>(create: (_) => InMemoryAuthorRepository()),
+        ChangeNotifierProvider(
+          create: (context) => BookListNotifier(context.read<BookRepository>())..load(),
+        ),
+        ChangeNotifierProvider(
+          create: (context) => AuthorListNotifier(context.read<AuthorRepository>())..load(),
+        ),
+      ],
+      child: const LibraryApp(),
+    ),
+  );
+}
+
+class LibraryApp extends StatelessWidget {
+  const LibraryApp({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final authNotifier = context.watch<AuthNotifier>();
+    final router = buildRouter(authNotifier);
+
+    return InactivityWatcher(
+      child: MaterialApp.router(
+        title: 'Р‘РёР±Р»РёРѕС‚РµС‡РЅР°СЏ СЃРёСЃС‚РµРјР° (Auth & Roles)',
+        debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
+          useMaterial3: true,
+        ),
+        routerConfig: router,
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'models/role.dart';
+import 'screens/admin_users_screen.dart';
+import 'screens/book_form_screen.dart';
+import 'screens/book_list_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/forbidden_screen.dart';
+import 'screens/login_screen.dart';
+import 'screens/reader_loans_screen.dart';
+import 'screens/register_screen.dart';
+import 'state/auth_notifier.dart';
+
+final GlobalKey<NavigatorState> rootNavigatorKey = GlobalKey<NavigatorState>();
+
+GoRouter buildRouter(AuthNotifier auth) {
+  return GoRouter(
+    navigatorKey: rootNavigatorKey,
+    refreshListenable: auth,
+    initialLocation: '/',
+    redirect: (context, state) {
+      final loggedIn = auth.isAuthenticated;
+      final target = state.matchedLocation;
+      final isPublic = target == '/login' || target == '/register';
+
+      if (!loggedIn && !isPublic) {
+        final from = Uri.encodeComponent(state.uri.toString());
+        return '/login?from=$from';
+      }
+
+      if (loggedIn && isPublic) {
+        return '/';
+      }
+
+      return null;
+    },
+    routes: [
+      GoRoute(
+        path: '/login',
+        builder: (c, s) => LoginScreen(from: s.uri.queryParameters['from']),
+      ),
+      GoRoute(
+        path: '/register',
+        builder: (c, s) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/',
+        builder: (c, s) => const DashboardScreen(),
+      ),
+      GoRoute(
+        path: '/books',
+        builder: (c, s) => BookListScreen(queryParams: s.uri.queryParameters),
+        routes: [
+          GoRoute(
+            path: 'new',
+            builder: (c, s) => const BookFormScreen(),
+            redirect: (c, s) => auth.has(Role.librarian) ? null : '/forbidden',
+          ),
+          GoRoute(
+            path: ':id/edit',
+            builder: (c, s) => BookFormScreen(id: int.tryParse(s.pathParameters['id'] ?? '')),
+            redirect: (c, s) => auth.has(Role.librarian) ? null : '/forbidden',
+          ),
+        ],
+      ),
+      GoRoute(
+        path: '/my-loans',
+        builder: (c, s) => const ReaderLoansScreen(),
+        redirect: (c, s) => auth.has(Role.reader) ? null : '/forbidden',
+      ),
+      GoRoute(
+        path: '/admin/users',
+        builder: (c, s) => const AdminUsersScreen(),
+        redirect: (c, s) => auth.has(Role.admin) ? null : '/forbidden',
+      ),
+      GoRoute(
+        path: '/forbidden',
+        builder: (c, s) => const ForbiddenScreen(),
+      ),
+    ],
+    errorBuilder: (c, s) => Scaffold(
+      body: Center(
+        child: Text('РЎС‚СЂР°РЅРёС†Р° РЅРµ РЅР°Р№РґРµРЅР°: ${s.uri}'),
+      ),
+    ),
+  );
+}
+import 'package:dio/dio.dart';
+import '../state/auth_notifier.dart';
+import 'config.dart';
+
+Dio buildDio({AuthNotifier? authNotifier}) {
+  final dio = Dio(
+    BaseOptions(
+      baseUrl: apiBaseUrl,
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 15),
+      headers: {'Content-Type': 'application/json'},
+    ),
+  );
+
+  dio.interceptors.add(
+    InterceptorsWrapper(
+      onRequest: (options, handler) {
+        if (authNotifier?.accessToken != null) {
+          options.headers['Authorization'] = 'Bearer ${authNotifier!.accessToken}';
+        }
+        return handler.next(options);
+      },
+      onError: (error, handler) async {
+        final status = error.response?.statusCode;
+        final path = error.requestOptions.path;
+
+        if (status == 401 && !path.contains('/auth/') && authNotifier != null) {
+          try {
+            await authNotifier.refreshTokens();
+            final opts = error.requestOptions;
+            opts.headers['Authorization'] = 'Bearer ${authNotifier.accessToken}';
+
+            final cloneDio = Dio(
+              BaseOptions(
+                baseUrl: apiBaseUrl,
+                headers: {'Content-Type': 'application/json'},
+              ),
+            );
+            final response = await cloneDio.fetch(opts);
+            return handler.resolve(response);
+          } catch (_) {
+            await authNotifier.logout();
+          }
+        }
+        return handler.reject(error);
+      },
+    ),
+  );
+
+  return dio;
+}
+import 'dart:convert';
+import 'package:dio/dio.dart';
+
+sealed class ApiException implements Exception {
+  final String message;
+  const ApiException(this.message);
+  @override
+  String toString() => message;
+}
+
+class NetworkException extends ApiException {
+  const NetworkException([
+    super.message =
+        'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕРµРґРёРЅРёС‚СЊСЃСЏ СЃ СЃРµСЂРІРµСЂРѕРј. Р•СЃР»Рё СЃРµСЂРІРµСЂ Р·Р°РїСѓС‰РµРЅ, РїСЂРѕРІРµСЂСЊС‚Рµ РЅР°Р»РёС‡РёРµ РѕС€РёР±РєРё CORS.',
+  ]);
+}
+
+class UnauthorizedException extends ApiException {
+  const UnauthorizedException([super.message = 'РўСЂРµР±СѓРµС‚СЃСЏ РІС…РѕРґ РІ СЃРёСЃС‚РµРјСѓ.']);
+}
+
+class ForbiddenException extends ApiException {
+  const ForbiddenException([super.message = 'РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ РґР»СЏ СЌС‚РѕРіРѕ РґРµР№СЃС‚РІРёСЏ.']);
+}
+
+class NotFoundException extends ApiException {
+  const NotFoundException([super.message = 'Р—Р°РїРёСЃСЊ РЅРµ РЅР°Р№РґРµРЅР°.']);
+}
+
+class ConflictException extends ApiException {
+  const ConflictException(super.message);
+}
+
+class ValidationException extends ApiException {
+  final Map<String, String> errors;
+  const ValidationException(super.message, this.errors);
+}
+
+class ServerException extends ApiException {
+  const ServerException([super.message = 'РћС€РёР±РєР° РЅР° СЃРµСЂРІРµСЂРµ. РџРѕРїСЂРѕР±СѓР№С‚Рµ РїРѕР·Р¶Рµ.']);
+}
+
+ApiException mapHttpError(int status, dynamic body) {
+  dynamic parsed = body;
+  if (parsed is String && parsed.trim().isNotEmpty) {
+    try {
+      parsed = jsonDecode(parsed);
+    } catch (_) {}
+  }
+
+  final message = (parsed is Map && parsed['message'] is String)
+      ? parsed['message'] as String
+      : null;
+
+  return switch (status) {
+    401 => UnauthorizedException(message ?? 'РўСЂРµР±СѓРµС‚СЃСЏ РІС…РѕРґ РІ СЃРёСЃС‚РµРјСѓ.'),
+    403 => ForbiddenException(message ?? 'РќРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ РґР»СЏ СЌС‚РѕРіРѕ РґРµР№СЃС‚РІРёСЏ.'),
+    404 => NotFoundException(message ?? 'Р—Р°РїРёСЃСЊ РЅРµ РЅР°Р№РґРµРЅР°.'),
+    409 => ConflictException(message ?? 'РћРїРµСЂР°С†РёСЏ РЅРµРІРѕР·РјРѕР¶РЅР° (РєРѕРЅС„Р»РёРєС‚ РґР°РЅРЅС‹С…).'),
+    422 => ValidationException(
+        message ?? 'РћС€РёР±РєР° РІР°Р»РёРґР°С†РёРё',
+        (parsed is Map && parsed['errors'] is Map)
+            ? (parsed['errors'] as Map).map((k, v) => MapEntry('$k', '$v'))
+            : const {},
+      ),
+    _ => ServerException(message ?? 'РќРµРёР·РІРµСЃС‚РЅР°СЏ РѕС€РёР±РєР° (РєРѕРґ $status).'),
+  };
+}
+
+ApiException mapDioError(DioException e) {
+  final existing = e.error;
+  if (existing is ApiException) return existing;
+
+  if (e.response != null && e.response!.statusCode != null) {
+    return mapHttpError(e.response!.statusCode!, e.response!.data);
+  }
+
+  return switch (e.type) {
+    DioExceptionType.connectionTimeout ||
+    DioExceptionType.sendTimeout ||
+    DioExceptionType.receiveTimeout =>
+      const NetworkException('РЎРµСЂРІРµСЂ РЅРµ РѕС‚РІРµС‚РёР» РІРѕРІСЂРµРјСЏ (С‚Р°Р№РјР°СѓС‚).'),
+    DioExceptionType.connectionError =>
+      const NetworkException(
+        'РќРµ СѓРґР°Р»РѕСЃСЊ СЃРѕРµРґРёРЅРёС‚СЊСЃСЏ СЃ СЃРµСЂРІРµСЂРѕРј. Р•СЃР»Рё СЃРµСЂРІРµСЂ Р·Р°РїСѓС‰РµРЅ, РїСЂРѕРІРµСЂСЊС‚Рµ РЅР°Р»РёС‡РёРµ РѕС€РёР±РєРё CORS.',
+      ),
+    DioExceptionType.cancel => const NetworkException('Р—Р°РїСЂРѕСЃ РѕС‚РјРµРЅС‘РЅ.'),
+    _ => const ServerException(),
+  };
+}
+
+Future<T> guard<T>(Future<T> Function() action) async {
+  try {
+    return await action();
+  } on DioException catch (e) {
+    throw mapDioError(e);
+  }
+}
+const String apiBaseUrl = String.fromEnvironment(
+  'API_BASE_URL',
+  defaultValue: 'http://localhost:8080/api',
+);
+import '../models/author.dart';
+import '../models/book.dart';
+import '../models/genre.dart';
+import '../models/library_card.dart';
+import '../models/publisher.dart';
+import '../models/reader.dart';
+
+final List<Genre> seedGenres = [
+  const Genre(id: 1, name: 'РљР»Р°СЃСЃРёРєР°'),
+  const Genre(id: 2, name: 'РСЃС‚РѕСЂРёС‡РµСЃРєРёР№'),
+  const Genre(id: 3, name: 'Р¤РёР»РѕСЃРѕС„РёСЏ'),
+  const Genre(id: 4, name: 'РђРЅС‚РёСѓС‚РѕРїРёСЏ'),
+  const Genre(id: 5, name: 'Р¤Р°РЅС‚Р°СЃС‚РёРєР°'),
+  const Genre(id: 6, name: 'РЎР°С‚РёСЂР°'),
+  const Genre(id: 7, name: 'РњР°РіРёС‡РµСЃРєРёР№ СЂРµР°Р»РёР·Рј'),
+  const Genre(id: 8, name: 'Р”СЂР°РјР°С‚СѓСЂРіРёСЏ'),
+];
+
+final List<Publisher> seedPublishers = [
+  const Publisher(id: 1, name: 'РђР·Р±СѓРєР°-РђС‚С‚РёРєСѓСЃ', city: 'РЎР°РЅРєС‚-РџРµС‚РµСЂР±СѓСЂРі'),
+  const Publisher(id: 2, name: 'Р­РєСЃРјРѕ', city: 'РњРѕСЃРєРІР°'),
+  const Publisher(id: 3, name: 'РђРЎРў', city: 'РњРѕСЃРєРІР°'),
+];
+
+final List<Author> seedAuthors = [
+  const Author(id: 1, firstName: 'Р›РµРІ', lastName: 'РўРѕР»СЃС‚РѕР№', country: 'Р РѕСЃСЃРёСЏ', birthYear: 1828),
+  const Author(id: 2, firstName: 'Р¤С‘РґРѕСЂ', lastName: 'Р”РѕСЃС‚РѕРµРІСЃРєРёР№', country: 'Р РѕСЃСЃРёСЏ', birthYear: 1821),
+  const Author(id: 3, firstName: 'Р”Р¶РѕСЂРґР¶', lastName: 'РћСЂСѓСЌР»Р»', country: 'Р’РµР»РёРєРѕР±СЂРёС‚Р°РЅРёСЏ', birthYear: 1903),
+  const Author(id: 4, firstName: 'РњРёС…Р°РёР»', lastName: 'Р‘СѓР»РіР°РєРѕРІ', country: 'Р РѕСЃСЃРёСЏ', birthYear: 1891),
+  const Author(id: 5, firstName: 'Р СЌР№', lastName: 'Р‘СЂСЌРґР±РµСЂРё', country: 'РЎРЁРђ', birthYear: 1920),
+  const Author(id: 6, firstName: 'Р¤СЂР°РЅС†', lastName: 'РљР°С„РєР°', country: 'РђРІСЃС‚СЂРёСЏ', birthYear: 1883),
+  const Author(id: 7, firstName: 'Р“Р°Р±СЂРёСЌР»СЊ', lastName: 'Р“Р°СЂСЃРёР° РњР°СЂРєРµСЃ', country: 'РљРѕР»СѓРјР±РёСЏ', birthYear: 1927),
+  const Author(id: 8, firstName: 'РђРЅС‚РѕРЅ', lastName: 'Р§РµС…РѕРІ', country: 'Р РѕСЃСЃРёСЏ', birthYear: 1860),
+];
+
+final List<Book> seedBooks = [
+  const Book(id: 1, title: 'Р’РѕР№РЅР° Рё РјРёСЂ', isbn: '978-5-389-06256-6', year: 1869, pages: 1225, publisherId: 1, authorIds: [1], genreIds: [1, 2], copiesTotal: 5, copiesAvailable: 3),
+  const Book(id: 2, title: 'РђРЅРЅР° РљР°СЂРµРЅРёРЅР°', isbn: '978-5-17-090635-2', year: 1877, pages: 864, publisherId: 1, authorIds: [1], genreIds: [1], copiesTotal: 4, copiesAvailable: 2),
+  const Book(id: 3, title: 'РџСЂРµСЃС‚СѓРїР»РµРЅРёРµ Рё РЅР°РєР°Р·Р°РЅРёРµ', isbn: '978-5-389-07446-0', year: 1866, pages: 672, publisherId: 2, authorIds: [2], genreIds: [1, 3], copiesTotal: 7, copiesAvailable: 5),
+  const Book(id: 4, title: '1984', isbn: '978-5-17-080115-2', year: 1949, pages: 320, publisherId: 3, authorIds: [3], genreIds: [4, 5], copiesTotal: 10, copiesAvailable: 8),
+  const Book(id: 5, title: 'РњР°СЃС‚РµСЂ Рё РњР°СЂРіР°СЂРёС‚Р°', isbn: '978-5-389-01686-6', year: 1967, pages: 512, publisherId: 1, authorIds: [4], genreIds: [1, 7], copiesTotal: 9, copiesAvailable: 7),
+  const Book(id: 6, title: '451 РіСЂР°РґСѓСЃ РїРѕ Р¤Р°СЂРµРЅРіРµР№С‚Сѓ', isbn: '978-5-17-077750-1', year: 1953, pages: 256, publisherId: 3, authorIds: [5], genreIds: [4, 5], copiesTotal: 12, copiesAvailable: 9),
+];
+
+final List<Reader> seedReaders = [
+  Reader(
+    id: 1,
+    fullName: 'РРІР°РЅРѕРІ РРІР°РЅ РРІР°РЅРѕРІРёС‡',
+    email: 'ivanov@mail.ru',
+    phone: '+7 (999) 111-22-33',
+    card: LibraryCard(cardNumber: 'LC-1001', issuedAt: DateTime(2025, 1, 15), isActive: true),
+  ),
+  Reader(
+    id: 2,
+    fullName: 'РџРµС‚СЂРѕРІР° РђРЅРЅР° РЎРµСЂРіРµРµРІРЅР°',
+    email: 'petrova@yandex.ru',
+    phone: '+7 (999) 444-55-66',
+    card: LibraryCard(cardNumber: 'LC-1002', issuedAt: DateTime(2025, 2, 20), isActive: true),
+  ),
+];
+
+final Map<int, String> genreMap = {for (var g in seedGenres) g.id: g.name};
+final Map<int, String> publisherMap = {for (var p in seedPublishers) p.id: p.name};
+import 'role.dart';
+
+class AppUser {
+  final int id;
+  final String username;
+  final String fullName;
+  final Role role;
+
+  const AppUser({
+    required this.id,
+    required this.username,
+    required this.fullName,
+    required this.role,
+  });
+
+  factory AppUser.fromJson(Map<String, dynamic> json) {
+    return AppUser(
+      id: json['id'] as int? ?? 0,
+      username: json['username'] as String? ?? '',
+      fullName: json['fullName'] as String? ?? json['username'] as String? ?? '',
+      role: Role.fromString(json['role'] as String?),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'username': username,
+        'fullName': fullName,
+        'role': role.name,
+      };
+}
+class Author {
+  final int id;
+  final String firstName;
+  final String lastName;
+  final String country;
+  final int birthYear;
+  final DateTime? deletedAt;
+
+  const Author({
+    required this.id,
+    required this.firstName,
+    required this.lastName,
+    required this.country,
+    required this.birthYear,
+    this.deletedAt,
+  });
+
+  String get fullName => '$firstName $lastName';
+  bool get isDeleted => deletedAt != null;
+
+  Author copyWith({
+    String? firstName,
+    String? lastName,
+    String? country,
+    int? birthYear,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
+  }) {
+    return Author(
+      id: id,
+      firstName: firstName ?? this.firstName,
+      lastName: lastName ?? this.lastName,
+      country: country ?? this.country,
+      birthYear: birthYear ?? this.birthYear,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'firstName': firstName,
+        'lastName': lastName,
+        'country': country,
+        'birthYear': birthYear,
+        'deletedAt': deletedAt?.toIso8601String(),
+      };
+
+  factory Author.fromJson(Map<String, dynamic> json) => Author(
+        id: json['id'] as int? ?? 0,
+        firstName: json['firstName'] as String? ?? '',
+        lastName: json['lastName'] as String? ?? '',
+        country: json['country'] as String? ?? '',
+        birthYear: json['birthYear'] as int? ?? 1900,
+        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+      );
+}
+class AuthorQuery {
+  final String search;
+  final String? country;
+  final String sortField;
+  final bool sortAscending;
+  final int page;
+  final int size;
+  final bool includeDeleted;
+
+  const AuthorQuery({
+    this.search = '',
+    this.country,
+    this.sortField = 'lastName',
+    this.sortAscending = true,
+    this.page = 1,
+    this.size = 10,
+    this.includeDeleted = false,
+  });
+
+  AuthorQuery copyWith({
+    String? search,
+    Object? country = _unset,
+    String? sortField,
+    bool? sortAscending,
+    int? page,
+    int? size,
+    bool? includeDeleted,
+  }) {
+    return AuthorQuery(
+      search: search ?? this.search,
+      country: country == _unset ? this.country : country as String?,
+      sortField: sortField ?? this.sortField,
+      sortAscending: sortAscending ?? this.sortAscending,
+      page: page ?? 1,
+      size: size ?? this.size,
+      includeDeleted: includeDeleted ?? this.includeDeleted,
+    );
+  }
+
+  static const _unset = Object();
+
+  Map<String, String> toQueryParams() {
+    final params = <String, String>{};
+    if (search.trim().isNotEmpty) params['search'] = search.trim();
+    if (country != null && country!.isNotEmpty) params['country'] = country!;
+    params['sort'] = '$sortField,${sortAscending ? 'asc' : 'desc'}';
+    if (page > 1) params['page'] = page.toString();
+    if (size != 10) params['size'] = size.toString();
+    if (includeDeleted) params['includeDeleted'] = 'true';
+    return params;
+  }
+
+  factory AuthorQuery.fromQueryParams(Map<String, String> params) {
+    final sortRaw = params['sort'] ?? 'lastName,asc';
+    final sortParts = sortRaw.split(',');
+    return AuthorQuery(
+      search: params['search'] ?? '',
+      country: params['country'],
+      sortField: sortParts.isNotEmpty ? sortParts[0] : 'lastName',
+      sortAscending: sortParts.length > 1 ? sortParts[1] != 'desc' : true,
+      page: int.tryParse(params['page'] ?? '1') ?? 1,
+      size: int.tryParse(params['size'] ?? '10') ?? 10,
+      includeDeleted: params['includeDeleted'] == 'true',
+    );
+  }
+}
+class Book {
+  final int id;
+  final String title;
+  final String isbn;
+  final int year;
+  final int pages;
+  final int publisherId;
+  final List<int> authorIds;
+  final List<int> genreIds;
+  final int copiesTotal;
+  final int copiesAvailable;
+  final DateTime? deletedAt;
+
+  const Book({
+    required this.id,
+    required this.title,
+    required this.isbn,
+    required this.year,
+    required this.pages,
+    required this.publisherId,
+    required this.authorIds,
+    required this.genreIds,
+    required this.copiesTotal,
+    required this.copiesAvailable,
+    this.deletedAt,
+  });
+
+  bool get isDeleted => deletedAt != null;
+
+  Book copyWith({
+    String? title,
+    String? isbn,
+    int? year,
+    int? pages,
+    int? publisherId,
+    List<int>? authorIds,
+    List<int>? genreIds,
+    int? copiesTotal,
+    int? copiesAvailable,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
+  }) {
+    return Book(
+      id: id,
+      title: title ?? this.title,
+      isbn: isbn ?? this.isbn,
+      year: year ?? this.year,
+      pages: pages ?? this.pages,
+      publisherId: publisherId ?? this.publisherId,
+      authorIds: authorIds ?? this.authorIds,
+      genreIds: genreIds ?? this.genreIds,
+      copiesTotal: copiesTotal ?? this.copiesTotal,
+      copiesAvailable: copiesAvailable ?? this.copiesAvailable,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'title': title,
+        'isbn': isbn,
+        'year': year,
+        'pages': pages,
+        'publisherId': publisherId,
+        'authorIds': authorIds,
+        'genreIds': genreIds,
+        'copiesTotal': copiesTotal,
+        'copiesAvailable': copiesAvailable,
+        'deletedAt': deletedAt?.toIso8601String(),
+      };
+
+  factory Book.fromJson(Map<String, dynamic> json) => Book(
+        id: json['id'] as int? ?? 0,
+        title: json['title'] as String? ?? '',
+        isbn: json['isbn'] as String? ?? '',
+        year: json['year'] as int? ?? 0,
+        pages: json['pages'] as int? ?? 0,
+        publisherId: json['publisherId'] as int? ?? 0,
+        authorIds: (json['authorIds'] as List?)?.map((e) => e as int).toList() ?? const [],
+        genreIds: (json['genreIds'] as List?)?.map((e) => e as int).toList() ?? const [],
+        copiesTotal: json['copiesTotal'] as int? ?? 0,
+        copiesAvailable: json['copiesAvailable'] as int? ?? 0,
+        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+      );
+}
+class BookQuery {
+  final String search;
+  final int? genreId;
+  final int? publisherId;
+  final int? yearFrom;
+  final int? yearTo;
+  final String sortField;
+  final bool sortAscending;
+  final int page;
+  final int size;
+  final bool includeDeleted;
+  final int? delay;
+  final int? fail;
+
+  const BookQuery({
+    this.search = '',
+    this.genreId,
+    this.publisherId,
+    this.yearFrom,
+    this.yearTo,
+    this.sortField = 'title',
+    this.sortAscending = true,
+    this.page = 1,
+    this.size = 10,
+    this.includeDeleted = false,
+    this.delay,
+    this.fail,
+  });
+
+  bool get sortAsc => sortAscending;
+  bool get showDeleted => includeDeleted;
+
+  BookQuery copyWith({
+    String? search,
+    int? genreId,
+    int? publisherId,
+    int? yearFrom,
+    int? yearTo,
+    String? sortField,
+    bool? sortAscending,
+    bool? sortAsc,
+    int? page,
+    int? size,
+    bool? includeDeleted,
+    bool? showDeleted,
+    int? delay,
+    int? fail,
+  }) {
+    return BookQuery(
+      search: search ?? this.search,
+      genreId: genreId ?? this.genreId,
+      publisherId: publisherId ?? this.publisherId,
+      yearFrom: yearFrom ?? this.yearFrom,
+      yearTo: yearTo ?? this.yearTo,
+      sortField: sortField ?? this.sortField,
+      sortAscending: sortAscending ?? sortAsc ?? this.sortAscending,
+      page: page ?? this.page,
+      size: size ?? this.size,
+      includeDeleted: includeDeleted ?? showDeleted ?? this.includeDeleted,
+      delay: delay ?? this.delay,
+      fail: fail ?? this.fail,
+    );
+  }
+
+  Map<String, dynamic> toQueryParams() {
+    final params = <String, dynamic>{
+      'sort': '$sortField,${sortAscending ? "asc" : "desc"}',
+      'page': page,
+      'size': size,
+    };
+    if (search.trim().isNotEmpty) {
+      params['search'] = search.trim();
+    }
+    if (genreId != null) params['genreId'] = genreId;
+    if (publisherId != null) params['publisherId'] = publisherId;
+    if (yearFrom != null) params['yearFrom'] = yearFrom;
+    if (yearTo != null) params['yearTo'] = yearTo;
+    if (includeDeleted) params['deleted'] = 'true';
+    if (delay != null && delay! > 0) params['__delay'] = delay;
+    if (fail != null && fail! > 0) params['__fail'] = fail;
+    return params;
+  }
+}
+class Genre {
+  final int id;
+  final String name;
+  final DateTime? deletedAt;
+
+  const Genre({
+    required this.id,
+    required this.name,
+    this.deletedAt,
+  });
+
+  bool get isDeleted => deletedAt != null;
+
+  Genre copyWith({
+    String? name,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
+  }) {
+    return Genre(
+      id: id,
+      name: name ?? this.name,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'deletedAt': deletedAt?.toIso8601String(),
+      };
+
+  factory Genre.fromJson(Map<String, dynamic> json) => Genre(
+        id: json['id'] as int? ?? 0,
+        name: json['name'] as String? ?? '',
+        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+      );
+}
+class LibraryCard {
+  final String cardNumber;
+  final DateTime issuedAt;
+  final bool isActive;
+
+  const LibraryCard({
+    required this.cardNumber,
+    required this.issuedAt,
+    this.isActive = true,
+  });
+
+  LibraryCard copyWith({
+    String? cardNumber,
+    DateTime? issuedAt,
+    bool? isActive,
+  }) {
+    return LibraryCard(
+      cardNumber: cardNumber ?? this.cardNumber,
+      issuedAt: issuedAt ?? this.issuedAt,
+      isActive: isActive ?? this.isActive,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'cardNumber': cardNumber,
+        'issuedAt': issuedAt.toIso8601String(),
+        'isActive': isActive,
+      };
+
+  factory LibraryCard.fromJson(Map<String, dynamic> json) => LibraryCard(
+        cardNumber: json['cardNumber'] as String? ?? '',
+        issuedAt: json['issuedAt'] == null ? DateTime.now() : (DateTime.tryParse(json['issuedAt'] as String) ?? DateTime.now()),
+        isActive: json['isActive'] as bool? ?? true,
+      );
+}
+class PageResult<T> {
+  final List<T> items;
+  final int page;
+  final int size;
+  final int total;
+
+  const PageResult({
+    required this.items,
+    required this.page,
+    required this.size,
+    required this.total,
+  });
+
+  int get totalPages => total == 0 ? 1 : (total / size).ceil();
+  bool get hasPrevious => page > 1;
+  bool get hasNext => page < totalPages;
+
+  PageResult.empty()
+      : items = <T>[],
+        page = 1,
+        size = 10,
+        total = 0;
+}
+class Publisher {
+  final int id;
+  final String name;
+  final String city;
+  final DateTime? deletedAt;
+
+  const Publisher({
+    required this.id,
+    required this.name,
+    required this.city,
+    this.deletedAt,
+  });
+
+  bool get isDeleted => deletedAt != null;
+
+  Publisher copyWith({
+    String? name,
+    String? city,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
+  }) {
+    return Publisher(
+      id: id,
+      name: name ?? this.name,
+      city: city ?? this.city,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'name': name,
+        'city': city,
+        'deletedAt': deletedAt?.toIso8601String(),
+      };
+
+  factory Publisher.fromJson(Map<String, dynamic> json) => Publisher(
+        id: json['id'] as int? ?? 0,
+        name: json['name'] as String? ?? '',
+        city: json['city'] as String? ?? '',
+        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+      );
+}
+import 'library_card.dart';
+
+class Reader {
+  final int id;
+  final String fullName;
+  final String email;
+  final String phone;
+  final LibraryCard card;
+  final DateTime? deletedAt;
+
+  const Reader({
+    required this.id,
+    required this.fullName,
+    required this.email,
+    required this.phone,
+    required this.card,
+    this.deletedAt,
+  });
+
+  bool get isDeleted => deletedAt != null;
+
+  Reader copyWith({
+    String? fullName,
+    String? email,
+    String? phone,
+    LibraryCard? card,
+    DateTime? deletedAt,
+    bool clearDeletedAt = false,
+  }) {
+    return Reader(
+      id: id,
+      fullName: fullName ?? this.fullName,
+      email: email ?? this.email,
+      phone: phone ?? this.phone,
+      card: card ?? this.card,
+      deletedAt: clearDeletedAt ? null : (deletedAt ?? this.deletedAt),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'fullName': fullName,
+        'email': email,
+        'phone': phone,
+        'card': card.toJson(),
+        'deletedAt': deletedAt?.toIso8601String(),
+      };
+
+  factory Reader.fromJson(Map<String, dynamic> json) => Reader(
+        id: json['id'] as int? ?? 0,
+        fullName: json['fullName'] as String? ?? '',
+        email: json['email'] as String? ?? '',
+        phone: json['phone'] as String? ?? '',
+        card: json['card'] != null
+            ? LibraryCard.fromJson(json['card'] as Map<String, dynamic>)
+            : LibraryCard(cardNumber: 'LC-000', issuedAt: DateTime.now()),
+        deletedAt: json['deletedAt'] == null ? null : DateTime.tryParse(json['deletedAt'] as String),
+      );
+}
+enum Role {
+  reader(1, 'Р§РёС‚Р°С‚РµР»СЊ'),
+  librarian(2, 'Р‘РёР±Р»РёРѕС‚РµРєР°СЂСЊ'),
+  admin(3, 'РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ');
+
+  final int level;
+  final String label;
+  const Role(this.level, this.label);
+
+  static Role fromString(String? val) {
+    switch (val?.toLowerCase()) {
+      case 'admin':
+        return Role.admin;
+      case 'librarian':
+        return Role.librarian;
+      default:
+        return Role.reader;
+    }
+  }
+}
+import 'package:dio/dio.dart';
+import '../core/api_exceptions.dart';
+import '../models/book.dart';
+import '../models/book_query.dart';
+import '../models/page_result.dart';
+import 'book_repository.dart';
+
+class ApiBookRepository implements BookRepository {
+  final Dio _dio;
+  CancelToken? _searchCancelToken;
+
+  ApiBookRepository(this._dio);
+
+  Future<T> _retry<T>(Future<T> Function() action, {int attempts = 3}) async {
+    int count = 0;
+    while (true) {
+      count++;
+      try {
+        return await action();
+      } on NetworkException {
+        if (count >= attempts) rethrow;
+        await Future.delayed(Duration(milliseconds: 300 * count));
+      }
+    }
+  }
+
+  @override
+  Future<PageResult<Book>> find(BookQuery q) async {
+    _searchCancelToken?.cancel('new_search_initiated');
+    _searchCancelToken = CancelToken();
+
+    return _retry(() => guard(() async {
+      try {
+        final queryParams = <String, dynamic>{
+          'sort': '${q.sortField},${q.sortAscending ? 'asc' : 'desc'}',
+          'page': q.page,
+          'size': q.size,
+          if (q.search.trim().isNotEmpty) 'search': q.search.trim(),
+          if (q.genreId != null) 'genreId': q.genreId,
+          if (q.publisherId != null) 'publisherId': q.publisherId,
+          if (q.yearFrom != null) 'yearFrom': q.yearFrom,
+          if (q.yearTo != null) 'yearTo': q.yearTo,
+          if (q.includeDeleted) 'includeDeleted': true,
+          if (q.delay != null && q.delay! > 0) '__delay': q.delay,
+          if (q.fail != null && q.fail! > 0) '__fail': q.fail,
+        };
+
+        final response = await _dio.get(
+          '/books',
+          queryParameters: queryParams,
+          cancelToken: _searchCancelToken,
+        );
+
+        final data = response.data;
+        if (data is Map<String, dynamic>) {
+          final itemsRaw = data['items'] as List? ?? [];
+          final items = itemsRaw
+              .map((item) => Book.fromJson(item as Map<String, dynamic>))
+              .toList();
+          final total = data['total'] as int? ?? items.length;
+          final page = data['page'] as int? ?? q.page;
+          final size = data['size'] as int? ?? q.size;
+          return PageResult<Book>(
+            items: items,
+            total: total,
+            page: page,
+            size: size,
+          );
+        }
+
+        if (data is List) {
+          final items = data
+              .map((item) => Book.fromJson(item as Map<String, dynamic>))
+              .toList();
+          return PageResult<Book>(
+            items: items,
+            total: items.length,
+            page: q.page,
+            size: q.size,
+          );
+        }
+
+        return PageResult<Book>(
+          items: const [],
+          total: 0,
+          page: q.page,
+          size: q.size,
+        );
+      } on DioException catch (e) {
+        if (CancelToken.isCancel(e)) {
+          return PageResult<Book>(
+            items: const [],
+            total: 0,
+            page: q.page,
+            size: q.size,
+          );
+        }
+        rethrow;
+      }
+    }));
+  }
+
+  @override
+  Future<Book?> findById(int id) => _retry(() => guard(() async {
+        final response = await _dio.get('/books/$id');
+        if (response.data == null) return null;
+        return Book.fromJson(response.data as Map<String, dynamic>);
+      }));
+
+  @override
+  Future<Book> create(Book book) => guard(() async {
+        final response = await _dio.post(
+          '/books',
+          data: book.toJson(),
+        );
+        return Book.fromJson(response.data as Map<String, dynamic>);
+      });
+
+  @override
+  Future<Book> update(Book book) => guard(() async {
+        final response = await _dio.put(
+          '/books/${book.id}',
+          data: book.toJson(),
+        );
+        return Book.fromJson(response.data as Map<String, dynamic>);
+      });
+
+  @override
+  Future<void> softDelete(int id) => guard(() async {
+        await _dio.delete('/books/$id');
+      });
+
+  @override
+  Future<void> hardDelete(int id) => guard(() async {
+        await _dio.delete('/books/$id', queryParameters: {'hard': 'true'});
+      });
+
+  @override
+  Future<void> restore(int id) => guard(() async {
+        await _dio.post('/books/$id/restore');
+      });
+
+  @override
+  Future<int> deleteMany(List<int> ids) => guard(() async {
+        final response = await _dio.post(
+          '/books/bulk-delete',
+          data: {'ids': ids},
+        );
+        return response.data['deletedCount'] as int? ?? ids.length;
+      });
+}
+import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../data/seed_data.dart';
+import '../models/author.dart';
+import '../models/book.dart';
+import '../models/book_query.dart';
+import '../models/genre.dart';
+import '../models/page_result.dart';
+import '../models/publisher.dart';
+import '../models/reader.dart';
+import 'book_repository.dart';
+
+class PersistentLibraryRepository implements BookRepository {
+  static const _booksKey = 'books_v2';
+  static const _authorsKey = 'authors_v2';
+  static const _genresKey = 'genres_v2';
+  static const _publishersKey = 'publishers_v2';
+  static const _readersKey = 'readers_v2';
+
+  final SharedPreferences _prefs;
+
+  List<Book> books = [];
+  List<Author> authors = [];
+  List<Genre> genres = [];
+  List<Publisher> publishers = [];
+  List<Reader> readers = [];
+
+  PersistentLibraryRepository(this._prefs) {
+    _restoreAll();
+  }
+
+  void _restoreAll() {
+    books = _restoreList(_booksKey, seedBooks, (j) => Book.fromJson(j));
+    authors = _restoreList(_authorsKey, seedAuthors, (j) => Author.fromJson(j));
+    genres = _restoreList(_genresKey, seedGenres, (j) => Genre.fromJson(j));
+    publishers = _restoreList(_publishersKey, seedPublishers, (j) => Publisher.fromJson(j));
+    readers = _restoreList(_readersKey, seedReaders, (j) => Reader.fromJson(j));
+  }
+
+  List<T> _restoreList<T>(String key, List<T> fallback, T Function(Map<String, dynamic>) fromJson) {
+    final raw = _prefs.getString(key);
+    if (raw == null) {
+      _prefs.setString(key, jsonEncode(fallback));
+      return [...fallback];
+    }
+    try {
+      final list = jsonDecode(raw) as List;
+      return list.map((e) => fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      _prefs.setString(key, jsonEncode(fallback));
+      return [...fallback];
+    }
+  }
+
+  Future<void> saveBooks() async =>
+      _prefs.setString(_booksKey, jsonEncode(books.map((e) => e.toJson()).toList()));
+  Future<void> saveAuthors() async =>
+      _prefs.setString(_authorsKey, jsonEncode(authors.map((e) => e.toJson()).toList()));
+  Future<void> saveGenres() async =>
+      _prefs.setString(_genresKey, jsonEncode(genres.map((e) => e.toJson()).toList()));
+  Future<void> savePublishers() async =>
+      _prefs.setString(_publishersKey, jsonEncode(publishers.map((e) => e.toJson()).toList()));
+  Future<void> saveReaders() async =>
+      _prefs.setString(_readersKey, jsonEncode(readers.map((e) => e.toJson()).toList()));
+
+  @override
+  Future<PageResult<Book>> find(BookQuery q) async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    var rows = books.where((b) => q.includeDeleted || !b.isDeleted).toList();
+
+    if (q.search.trim().isNotEmpty) {
+      final needle = q.search.trim().toLowerCase();
+      rows = rows
+          .where((b) =>
+              b.title.toLowerCase().contains(needle) ||
+              b.isbn.toLowerCase().contains(needle))
+          .toList();
+    }
+
+    if (q.genreId != null) {
+      rows = rows.where((b) => b.genreIds.contains(q.genreId)).toList();
+    }
+
+    if (q.publisherId != null) {
+      rows = rows.where((b) => b.publisherId == q.publisherId).toList();
+    }
+
+    if (q.yearFrom != null) {
+      rows = rows.where((b) => b.year >= q.yearFrom!).toList();
+    }
+
+    if (q.yearTo != null) {
+      rows = rows.where((b) => b.year <= q.yearTo!).toList();
+    }
+
+    rows.sort((a, b) {
+      final result = switch (q.sortField) {
+        'year' => a.year.compareTo(b.year),
+        'pages' => a.pages.compareTo(b.pages),
+        _ => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      };
+      return q.sortAscending ? result : -result;
+    });
+
+    final total = rows.length;
+    final from = (q.page - 1) * q.size;
+    final to = (from + q.size) > total ? total : (from + q.size);
+    final items = from >= total ? <Book>[] : rows.sublist(from, to);
+
+    return PageResult(items: items, page: q.page, size: q.size, total: total);
+  }
+
+  @override
+  Future<Book?> findById(int id) async {
+    final index = books.indexWhere((b) => b.id == id);
+    return index != -1 ? books[index] : null;
+  }
+
+  @override
+  Future<Book> create(Book book) => saveBook(book);
+
+  @override
+  Future<Book> update(Book book) => saveBook(book);
+
+  @override
+  Future<void> softDelete(int id) async {
+    final i = books.indexWhere((b) => b.id == id);
+    if (i == -1) throw StateError('РљРЅРёРіР° $id РЅРµ РЅР°Р№РґРµРЅР°');
+    books[i] = books[i].copyWith(deletedAt: DateTime.now());
+    await saveBooks();
+  }
+
+  @override
+  Future<void> hardDelete(int id) async {
+    books.removeWhere((b) => b.id == id);
+    await saveBooks();
+  }
+
+  @override
+  Future<void> restore(int id) async {
+    final i = books.indexWhere((b) => b.id == id);
+    if (i == -1) throw StateError('РљРЅРёРіР° $id РЅРµ РЅР°Р№РґРµРЅР°');
+    books[i] = books[i].copyWith(clearDeletedAt: true);
+    await saveBooks();
+  }
+
+  @override
+  Future<int> deleteMany(List<int> ids) async {
+    var count = 0;
+    for (final id in ids) {
+      final i = books.indexWhere((b) => b.id == id && !b.isDeleted);
+      if (i != -1) {
+        books[i] = books[i].copyWith(deletedAt: DateTime.now());
+        count++;
+      }
+    }
+    await saveBooks();
+    return count;
+  }
+
+  bool isIsbnUnique(String isbn, int? excludeId) {
+    final normalized = isbn.replaceAll('-', '').trim().toLowerCase();
+    return !books.any((b) =>
+        b.id != excludeId &&
+        !b.isDeleted &&
+        b.isbn.replaceAll('-', '').trim().toLowerCase() == normalized);
+  }
+
+  bool isEmailUnique(String email, int? excludeId) {
+    final normalized = email.trim().toLowerCase();
+    return !readers.any((r) =>
+        r.id != excludeId &&
+        !r.isDeleted &&
+        r.email.trim().toLowerCase() == normalized);
+  }
+
+  int countBooksByPublisher(int publisherId) {
+    return books.where((b) => b.publisherId == publisherId && !b.isDeleted).length;
+  }
+
+  Future<Book> saveBook(Book book) async {
+    if (book.id == 0) {
+      final newId = books.isEmpty ? 1 : (books.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1);
+      final newBook = Book(
+        id: newId,
+        title: book.title,
+        isbn: book.isbn,
+        year: book.year,
+        pages: book.pages,
+        publisherId: book.publisherId,
+        authorIds: book.authorIds,
+        genreIds: book.genreIds,
+        copiesTotal: book.copiesTotal,
+        copiesAvailable: book.copiesAvailable,
+      );
+      books.add(newBook);
+      await saveBooks();
+      return newBook;
+    } else {
+      final index = books.indexWhere((b) => b.id == book.id);
+      if (index != -1) {
+        books[index] = book;
+        await saveBooks();
+      }
+      return book;
+    }
+  }
+
+  Future<Reader> saveReader(Reader reader) async {
+    if (reader.id == 0) {
+      final newId = readers.isEmpty ? 1 : (readers.map((e) => e.id).reduce((a, b) => a > b ? a : b) + 1);
+      final created = Reader(
+        id: newId,
+        fullName: reader.fullName,
+        email: reader.email,
+        phone: reader.phone,
+        card: reader.card,
+      );
+      readers.add(created);
+      await saveReaders();
+      return created;
+    } else {
+      final index = readers.indexWhere((r) => r.id == reader.id);
+      if (index != -1) {
+        readers[index] = reader;
+        await saveReaders();
+      }
+      return reader;
+    }
+  }
+}
+import '../models/author.dart';
+import '../models/author_query.dart';
+import '../models/page_result.dart';
+
+abstract interface class AuthorRepository {
+  Future<PageResult<Author>> find(AuthorQuery query);
+  Future<Author?> findById(int id);
+  Future<Author> create(Author author);
+  Future<void> softDelete(int id);
+  Future<void> hardDelete(int id);
+  Future<void> restore(int id);
+  Future<int> deleteMany(List<int> ids);
+}
+import '../models/book.dart';
+import '../models/book_query.dart';
+import '../models/page_result.dart';
+
+abstract interface class BookRepository {
+  Future<PageResult<Book>> find(BookQuery query);
+  Future<Book?> findById(int id);
+  Future<Book> create(Book book);
+  Future<Book> update(Book book);
+  Future<void> softDelete(int id);
+  Future<void> hardDelete(int id);
+  Future<void> restore(int id);
+  Future<int> deleteMany(List<int> ids);
+}
+import 'package:dio/dio.dart';
+import '../data/seed_data.dart';
+import '../models/author.dart';
+import '../models/genre.dart';
+import '../models/publisher.dart';
+
+class CachedDictionaryRepository {
+  final Dio _dio;
+
+  List<Genre>? _cachedGenres;
+  List<Publisher>? _cachedPublishers;
+  List<Author>? _cachedAuthors;
+
+  CachedDictionaryRepository(this._dio);
+
+  Future<List<Genre>> getGenres() async {
+    if (_cachedGenres != null) return _cachedGenres!;
+    try {
+      final res = await _dio.get('/genres');
+      final list = (res.data['items'] ?? res.data) as List;
+      _cachedGenres = list.map((e) => Genre.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      _cachedGenres = [...seedGenres];
+    }
+    return _cachedGenres!;
+  }
+
+  Future<List<Publisher>> getPublishers() async {
+    if (_cachedPublishers != null) return _cachedPublishers!;
+    try {
+      final res = await _dio.get('/publishers');
+      final list = (res.data['items'] ?? res.data) as List;
+      _cachedPublishers = list.map((e) => Publisher.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      _cachedPublishers = [...seedPublishers];
+    }
+    return _cachedPublishers!;
+  }
+
+  Future<List<Author>> getAuthors() async {
+    if (_cachedAuthors != null) return _cachedAuthors!;
+    try {
+      final res = await _dio.get('/authors');
+      final list = (res.data['items'] ?? res.data) as List;
+      _cachedAuthors = list.map((e) => Author.fromJson(e as Map<String, dynamic>)).toList();
+    } catch (_) {
+      _cachedAuthors = [...seedAuthors];
+    }
+    return _cachedAuthors!;
+  }
+}
+import '../data/seed_data.dart';
+import '../models/author.dart';
+import '../models/author_query.dart';
+import '../models/page_result.dart';
+import 'author_repository.dart';
+
+class InMemoryAuthorRepository implements AuthorRepository {
+  final List<Author> _authors = [...seedAuthors];
+  int _nextId = seedAuthors.length + 1;
+
+  @override
+  Future<PageResult<Author>> find(AuthorQuery q) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    var rows = _authors.where((a) => q.includeDeleted || !a.isDeleted).toList();
+
+    if (q.search.trim().isNotEmpty) {
+      final needle = q.search.trim().toLowerCase();
+      rows = rows
+          .where((a) =>
+              a.lastName.toLowerCase().contains(needle) ||
+              a.firstName.toLowerCase().contains(needle) ||
+              a.country.toLowerCase().contains(needle))
+          .toList();
+    }
+
+    if (q.country != null && q.country!.isNotEmpty) {
+      rows = rows.where((a) => a.country == q.country).toList();
+    }
+
+    rows.sort((a, b) {
+      final result = switch (q.sortField) {
+        'birthYear' => a.birthYear.compareTo(b.birthYear),
+        'country' => a.country.compareTo(b.country),
+        _ => a.lastName.compareTo(b.lastName),
+      };
+      return q.sortAscending ? result : -result;
+    });
+
+    final total = rows.length;
+    final from = (q.page - 1) * q.size;
+    final to = (from + q.size) > total ? total : (from + q.size);
+    final items = from >= total ? <Author>[] : rows.sublist(from, to);
+
+    return PageResult(items: items, page: q.page, size: q.size, total: total);
+  }
+
+  @override
+  Future<Author?> findById(int id) async {
+    final index = _authors.indexWhere((a) => a.id == id);
+    return index != -1 ? _authors[index] : null;
+  }
+
+  @override
+  Future<Author> create(Author author) async {
+    final created = Author(
+      id: _nextId++,
+      firstName: author.firstName,
+      lastName: author.lastName,
+      country: author.country,
+      birthYear: author.birthYear,
+    );
+    _authors.add(created);
+    return created;
+  }
+
+  @override
+  Future<void> softDelete(int id) async {
+    final i = _authors.indexWhere((a) => a.id == id);
+    if (i == -1) throw StateError('РђРІС‚РѕСЂ $id РЅРµ РЅР°Р№РґРµРЅ');
+    _authors[i] = _authors[i].copyWith(deletedAt: DateTime.now());
+  }
+
+  @override
+  Future<void> hardDelete(int id) async {
+    _authors.removeWhere((a) => a.id == id);
+  }
+
+  @override
+  Future<void> restore(int id) async {
+    final i = _authors.indexWhere((a) => a.id == id);
+    if (i == -1) throw StateError('РђРІС‚РѕСЂ $id РЅРµ РЅР°Р№РґРµРЅ');
+    _authors[i] = _authors[i].copyWith(clearDeletedAt: true);
+  }
+
+  @override
+  Future<int> deleteMany(List<int> ids) async {
+    var count = 0;
+    for (final id in ids) {
+      final i = _authors.indexWhere((a) => a.id == id && !a.isDeleted);
+      if (i != -1) {
+        _authors[i] = _authors[i].copyWith(deletedAt: DateTime.now());
+        count++;
+      }
+    }
+    return count;
+  }
+}
+import '../data/seed_data.dart';
+import '../models/book.dart';
+import '../models/book_query.dart';
+import '../models/page_result.dart';
+import 'book_repository.dart';
+
+class InMemoryBookRepository implements BookRepository {
+  final List<Book> _books = [...seedBooks];
+  int _nextId = seedBooks.length + 1;
+
+  @override
+  Future<PageResult<Book>> find(BookQuery q) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    var rows = _books.where((b) => q.includeDeleted || !b.isDeleted).toList();
+
+    if (q.search.trim().isNotEmpty) {
+      final needle = q.search.trim().toLowerCase();
+      rows = rows
+          .where((b) =>
+              b.title.toLowerCase().contains(needle) ||
+              b.isbn.toLowerCase().contains(needle))
+          .toList();
+    }
+
+    if (q.genreId != null) {
+      rows = rows.where((b) => b.genreIds.contains(q.genreId)).toList();
+    }
+
+    if (q.publisherId != null) {
+      rows = rows.where((b) => b.publisherId == q.publisherId).toList();
+    }
+
+    if (q.yearFrom != null) {
+      rows = rows.where((b) => b.year >= q.yearFrom!).toList();
+    }
+
+    if (q.yearTo != null) {
+      rows = rows.where((b) => b.year <= q.yearTo!).toList();
+    }
+
+    rows.sort((a, b) {
+      final result = switch (q.sortField) {
+        'year' => a.year.compareTo(b.year),
+        'pages' => a.pages.compareTo(b.pages),
+        _ => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      };
+      return q.sortAscending ? result : -result;
+    });
+
+    final total = rows.length;
+    final from = (q.page - 1) * q.size;
+    final to = (from + q.size) > total ? total : (from + q.size);
+    final items = from >= total ? <Book>[] : rows.sublist(from, to);
+
+    return PageResult(items: items, page: q.page, size: q.size, total: total);
+  }
+
+  @override
+  Future<Book?> findById(int id) async {
+    final index = _books.indexWhere((b) => b.id == id);
+    return index != -1 ? _books[index] : null;
+  }
+
+  @override
+  Future<Book> create(Book book) async {
+    final created = Book(
+      id: _nextId++,
+      title: book.title,
+      isbn: book.isbn,
+      year: book.year,
+      pages: book.pages,
+      publisherId: book.publisherId,
+      authorIds: book.authorIds,
+      genreIds: book.genreIds,
+      copiesTotal: book.copiesTotal,
+      copiesAvailable: book.copiesAvailable,
+    );
+    _books.add(created);
+    return created;
+  }
+
+  @override
+  Future<Book> update(Book book) async {
+    final index = _books.indexWhere((b) => b.id == book.id);
+    if (index == -1) throw StateError('РљРЅРёРіР° ${book.id} РЅРµ РЅР°Р№РґРµРЅР°');
+    _books[index] = book;
+    return book;
+  }
+
+  @override
+  Future<void> softDelete(int id) async {
+    final i = _books.indexWhere((b) => b.id == id);
+    if (i == -1) throw StateError('РљРЅРёРіР° $id РЅРµ РЅР°Р№РґРµРЅР°');
+    _books[i] = _books[i].copyWith(deletedAt: DateTime.now());
+  }
+
+  @override
+  Future<void> hardDelete(int id) async {
+    _books.removeWhere((b) => b.id == id);
+  }
+
+  @override
+  Future<void> restore(int id) async {
+    final i = _books.indexWhere((b) => b.id == id);
+    if (i == -1) throw StateError('РљРЅРёРіР° $id РЅРµ РЅР°Р№РґРµРЅР°');
+    _books[i] = _books[i].copyWith(clearDeletedAt: true);
+  }
+
+  @override
+  Future<int> deleteMany(List<int> ids) async {
+    var count = 0;
+    for (final id in ids) {
+      final i = _books.indexWhere((b) => b.id == id && !b.isDeleted);
+      if (i != -1) {
+        _books[i] = _books[i].copyWith(deletedAt: DateTime.now());
+        count++;
+      }
+    }
+    return count;
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+class AdminUsersScreen extends StatelessWidget {
+  const AdminUsersScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('РЈРїСЂР°РІР»РµРЅРёРµ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏРјРё Рё СЂРѕР»СЏРјРё (РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ)'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 800),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              child: DataTable(
+                columns: const [
+                  DataColumn(label: Text('ID')),
+                  DataColumn(label: Text('Р›РѕРіРёРЅ')),
+                  DataColumn(label: Text('Р¤РРћ')),
+                  DataColumn(label: Text('Р РѕР»СЊ')),
+                  DataColumn(label: Text('Р”РµР№СЃС‚РІРёСЏ')),
+                ],
+                rows: const [
+                  DataRow(cells: [
+                    DataCell(Text('1')),
+                    DataCell(Text('admin')),
+                    DataCell(Text('РЎРёСЃС‚РµРјРЅС‹Р№ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ')),
+                    DataCell(Text('РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ')),
+                    DataCell(Icon(Icons.shield, color: Colors.purple)),
+                  ]),
+                  DataRow(cells: [
+                    DataCell(Text('2')),
+                    DataCell(Text('librarian')),
+                    DataCell(Text('РРІР°РЅРѕРІР° РњР°СЂРёСЏ РЎРµСЂРіРµРµРІРЅР°')),
+                    DataCell(Text('Р‘РёР±Р»РёРѕС‚РµРєР°СЂСЊ')),
+                    DataCell(Icon(Icons.edit, color: Colors.blue)),
+                  ]),
+                  DataRow(cells: [
+                    DataCell(Text('3')),
+                    DataCell(Text('reader')),
+                    DataCell(Text('РџРµС‚СЂРѕРІ РђР»РµРєСЃРµР№ Р’РёРєС‚РѕСЂРѕРІРёС‡')),
+                    DataCell(Text('Р§РёС‚Р°С‚РµР»СЊ')),
+                    DataCell(Icon(Icons.edit, color: Colors.blue)),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../models/author.dart';
+import '../models/author_query.dart';
+import '../state/author_list_notifier.dart';
+import '../state/load_status.dart';
+import '../widgets/entity_table.dart';
+import '../widgets/pagination_bar.dart';
+import '../widgets/search_input.dart';
+
+class AuthorListScreen extends StatefulWidget {
+  final Map<String, String> queryParams;
+  const AuthorListScreen({super.key, required this.queryParams});
+
+  @override
+  State<AuthorListScreen> createState() => _AuthorListScreenState();
+}
+
+class _AuthorListScreenState extends State<AuthorListScreen> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _syncUrlToState(widget.queryParams);
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant AuthorListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.queryParams != widget.queryParams) {
+      _syncUrlToState(widget.queryParams);
+    }
+  }
+
+  void _syncUrlToState(Map<String, String> params) {
+    final query = AuthorQuery.fromQueryParams(params);
+    context.read<AuthorListNotifier>().applyQuery(query);
+  }
+
+  void _pushQuery(AuthorQuery next) {
+    final queryParams = next.toQueryParams();
+    final uri = Uri(path: '/authors', queryParameters: queryParams.isEmpty ? null : queryParams);
+    context.go(uri.toString());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = context.watch<AuthorListNotifier>();
+    final q = notifier.query;
+    final res = notifier.result;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('РЎРїРёСЃРѕРє Р°РІС‚РѕСЂРѕРІ'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/books'),
+        ),
+      ),
+      body: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: SearchInput(
+                    initialValue: q.search,
+                    hintText: 'РџРѕРёСЃРє РїРѕ С„Р°РјРёР»РёРё РёР»Рё СЃС‚СЂР°РЅРµ...',
+                    onChanged: (val) => _pushQuery(q.copyWith(search: val)),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                FilterChip(
+                  label: const Text('РЈРґР°Р»С‘РЅРЅС‹Рµ'),
+                  selected: q.includeDeleted,
+                  onSelected: (val) => _pushQuery(q.copyWith(includeDeleted: val)),
+                ),
+              ],
+            ),
+          ),
+          if (notifier.hasSelection)
+            Container(
+              color: Theme.of(context).colorScheme.primaryContainer,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                children: [
+                  Text('Р’С‹Р±СЂР°РЅРѕ: ${notifier.selected.length}'),
+                  const Spacer(),
+                  FilledButton.tonal(
+                    onPressed: () => notifier.deleteSelected(),
+                    child: const Text('РЈРґР°Р»РёС‚СЊ РІС‹Р±СЂР°РЅРЅС‹С…'),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: switch (notifier.status) {
+              LoadStatus.loading => const Center(child: CircularProgressIndicator()),
+              LoadStatus.error => Center(child: Text(notifier.error ?? 'РћС€РёР±РєР°')),
+              LoadStatus.idle || LoadStatus.success => res.items.isEmpty
+                  ? const Center(child: Text('РђРІС‚РѕСЂС‹ РЅРµ РЅР°Р№РґРµРЅС‹'))
+                  : LayoutBuilder(
+                      builder: (context, constraints) {
+                        if (constraints.maxWidth < 600) {
+                          return ListView.builder(
+                            itemCount: res.items.length,
+                            itemBuilder: (context, index) {
+                              final a = res.items[index];
+                              return Card(
+                                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                child: ListTile(
+                                  title: Text(a.fullName),
+                                  subtitle: Text('РЎС‚СЂР°РЅР°: ${a.country}, Р РѕРґРёР»СЃСЏ: ${a.birthYear}'),
+                                ),
+                              );
+                            },
+                          );
+                        }
+                        return EntityTable<Author>(
+                          items: res.items,
+                          idOf: (a) => a.id,
+                          selected: notifier.selected,
+                          onToggleSelect: (id) => notifier.toggleSelection(id),
+                          sortField: q.sortField,
+                          sortAscending: q.sortAscending,
+                          onSort: (f) => _pushQuery(
+                            q.copyWith(
+                              sortField: f,
+                              sortAscending: f == q.sortField ? !q.sortAscending : true,
+                            ),
+                          ),
+                          columns: [
+                            TableColumnSpec(label: 'Р¤Р°РјРёР»РёСЏ РРјСЏ', sortField: 'lastName', build: (a) => Text(a.fullName)),
+                            TableColumnSpec(label: 'РЎС‚СЂР°РЅР°', sortField: 'country', build: (a) => Text(a.country)),
+                            TableColumnSpec(label: 'Р“РѕРґ СЂРѕР¶РґРµРЅРёСЏ', sortField: 'birthYear', numeric: true, build: (a) => Text('${a.birthYear}')),
+                          ],
+                          actions: (a) => [
+                            if (a.isDeleted)
+                              IconButton(icon: const Icon(Icons.restore, color: Colors.green), onPressed: () => notifier.restore(a.id))
+                            else
+                              IconButton(icon: const Icon(Icons.delete_outline, color: Colors.orange), onPressed: () => notifier.softDelete(a.id)),
+                          ],
+                        );
+                      },
+                    ),
+            },
+          ),
+          PaginationBar(
+            page: res.page,
+            totalPages: res.totalPages,
+            totalItems: res.total,
+            size: res.size,
+            onPageChange: (p) => _pushQuery(q.copyWith(page: p)),
+            onSizeChange: (s) => _pushQuery(q.copyWith(size: s, page: 1)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../core/api_exceptions.dart';
+import '../data/seed_data.dart';
+import '../models/author.dart';
+import '../models/book.dart';
+import '../models/genre.dart';
+import '../models/publisher.dart';
+import '../repositories/book_repository.dart';
+import '../repositories/cached_dictionary_repository.dart';
+import '../state/book_list_notifier.dart';
+import '../utils/validators.dart';
+
+class BookFormScreen extends StatefulWidget {
+  final int? id;
+  const BookFormScreen({super.key, this.id});
+
+  bool get isEditing => id != null;
+
+  @override
+  State<BookFormScreen> createState() => _BookFormScreenState();
+}
+
+class _BookFormScreenState extends State<BookFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  late TextEditingController _titleController;
+  late TextEditingController _isbnController;
+  late TextEditingController _yearController;
+  late TextEditingController _pagesController;
+  late TextEditingController _copiesTotalController;
+  late TextEditingController _copiesAvailableController;
+
+  int? _publisherId;
+  List<int> _authorIds = [];
+  List<int> _genreIds = [];
+
+  bool _isDirty = false;
+  bool _saving = false;
+  Map<String, String> _serverErrors = {};
+
+  List<Publisher> _publishers = seedPublishers;
+  List<Author> _authors = seedAuthors;
+  List<Genre> _genres = seedGenres;
+
+  @override
+  void initState() {
+    super.initState();
+    _titleController = TextEditingController();
+    _isbnController = TextEditingController();
+    _yearController = TextEditingController(text: '2024');
+    _pagesController = TextEditingController(text: '300');
+    _copiesTotalController = TextEditingController(text: '5');
+    _copiesAvailableController = TextEditingController(text: '5');
+    _publisherId = _publishers.isNotEmpty ? _publishers.first.id : 1;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadDictionariesAndData();
+    });
+  }
+
+  Future<void> _loadDictionariesAndData() async {
+    final dictRepo = context.read<CachedDictionaryRepository>();
+    final bookRepo = context.read<BookRepository>();
+
+    final pubs = await dictRepo.getPublishers();
+    final auths = await dictRepo.getAuthors();
+    final gens = await dictRepo.getGenres();
+
+    if (!mounted) return;
+
+    setState(() {
+      _publishers = pubs;
+      _authors = auths;
+      _genres = gens;
+      if (_publisherId == null && _publishers.isNotEmpty) {
+        _publisherId = _publishers.first.id;
+      }
+    });
+
+    if (widget.isEditing) {
+      final existing = await bookRepo.findById(widget.id!);
+      if (!mounted) return;
+      if (existing != null) {
+        setState(() {
+          _titleController.text = existing.title;
+          _isbnController.text = existing.isbn;
+          _yearController.text = '${existing.year}';
+          _pagesController.text = '${existing.pages}';
+          _copiesTotalController.text = '${existing.copiesTotal}';
+          _copiesAvailableController.text = '${existing.copiesAvailable}';
+          _publisherId = existing.publisherId;
+          _authorIds = [...existing.authorIds];
+          _genreIds = [...existing.genreIds];
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _isbnController.dispose();
+    _yearController.dispose();
+    _pagesController.dispose();
+    _copiesTotalController.dispose();
+    _copiesAvailableController.dispose();
+    super.dispose();
+  }
+
+  void _markDirty() {
+    if (!_isDirty) setState(() => _isDirty = true);
+  }
+
+  Future<bool> _confirmLeave() async {
+    if (!_isDirty) return true;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('РќРµСЃРѕС…СЂР°РЅРµРЅРЅС‹Рµ РёР·РјРµРЅРµРЅРёСЏ'),
+        content: const Text(
+          'Р’С‹ СѓРІРµСЂРµРЅС‹, С‡С‚Рѕ С…РѕС‚РёС‚Рµ РїРѕРєРёРЅСѓС‚СЊ С„РѕСЂРјСѓ? Р’СЃРµ РЅРµСЃРѕС…СЂР°РЅРµРЅРЅС‹Рµ РґР°РЅРЅС‹Рµ Р±СѓРґСѓС‚ РїРѕС‚РµСЂСЏРЅС‹.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('РћСЃС‚Р°С‚СЊСЃСЏ')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('РЈР№С‚Рё')),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
+  Future<void> _submit() async {
+    setState(() => _serverErrors = {});
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _saving = true);
+    final bookRepo = context.read<BookRepository>();
+    final bookNotifier = context.read<BookListNotifier>();
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+
+    final book = Book(
+      id: widget.id ?? 0,
+      title: _titleController.text.trim(),
+      isbn: _isbnController.text.trim(),
+      year: int.parse(_yearController.text.trim()),
+      pages: int.parse(_pagesController.text.trim()),
+      publisherId: _publisherId ?? 1,
+      authorIds: _authorIds,
+      genreIds: _genreIds,
+      copiesTotal: int.parse(_copiesTotalController.text.trim()),
+      copiesAvailable: int.parse(_copiesAvailableController.text.trim()),
+    );
+
+    try {
+      if (widget.isEditing) {
+        await bookRepo.update(book);
+      } else {
+        await bookRepo.create(book);
+      }
+
+      await bookNotifier.load();
+
+      if (!mounted) return;
+
+      _isDirty = false;
+      messenger.showSnackBar(
+        SnackBar(
+          content: Text(
+            widget.isEditing ? 'РљРЅРёРіР° СѓСЃРїРµС€РЅРѕ РѕР±РЅРѕРІР»РµРЅР°' : 'РљРЅРёРіР° СѓСЃРїРµС€РЅРѕ РґРѕР±Р°РІР»РµРЅР° РЅР° СЃРµСЂРІРµСЂРµ',
+          ),
+        ),
+      );
+      router.go('/books');
+    } on ValidationException catch (e) {
+      if (!mounted) return;
+      setState(() => _serverErrors = e.errors);
+      _formKey.currentState?.validate();
+    } on ConflictException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.orange),
+      );
+    } on ApiException catch (e) {
+      messenger.showSnackBar(
+        SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final router = GoRouter.of(context);
+
+    return PopScope(
+      canPop: !_isDirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        final shouldLeave = await _confirmLeave();
+        if (shouldLeave && mounted) {
+          router.go('/books');
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.isEditing ? 'Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ РєРЅРёРіРё' : 'РќРѕРІР°СЏ РєРЅРёРіР° (РЎРµСЂРІРµСЂ)'),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              final shouldLeave = await _confirmLeave();
+              if (shouldLeave && mounted) {
+                router.go('/books');
+              }
+            },
+          ),
+        ),
+        body: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 640),
+              child: Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    onChanged: _markDirty,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        TextFormField(
+                          controller: _titleController,
+                          decoration: InputDecoration(
+                            labelText: 'РќР°Р·РІР°РЅРёРµ РєРЅРёРіРё *',
+                            border: const OutlineInputBorder(),
+                            errorText: _serverErrors['title'],
+                          ),
+                          validator: (v) =>
+                              AppValidators.requiredField(v) ?? AppValidators.minLength(v, 2),
+                        ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _isbnController,
+                          decoration: InputDecoration(
+                            labelText: 'ISBN *',
+                            border: const OutlineInputBorder(),
+                            errorText: _serverErrors['isbn'],
+                          ),
+                          validator: AppValidators.isbn,
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _yearController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Р“РѕРґ РёР·РґР°РЅРёСЏ *',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: (v) => AppValidators.intRange(v, 1500, 2026),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _pagesController,
+                                decoration: const InputDecoration(
+                                  labelText: 'РљРѕР»-РІРѕ СЃС‚СЂР°РЅРёС† *',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: AppValidators.positiveInt,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        DropdownButtonFormField<int>(
+                          value: _publisherId,
+                          decoration: const InputDecoration(
+                            labelText: 'РР·РґР°С‚РµР»СЊСЃС‚РІРѕ (РњРЅРѕРіРёРµ Рє РѕРґРЅРѕРјСѓ) *',
+                            border: OutlineInputBorder(),
+                          ),
+                          items: _publishers
+                              .map((p) => DropdownMenuItem(value: p.id, child: Text(p.name)))
+                              .toList(),
+                          onChanged: (val) {
+                            setState(() => _publisherId = val);
+                            _markDirty();
+                          },
+                          validator: (v) => v == null ? 'Р’С‹Р±РµСЂРёС‚Рµ РёР·РґР°С‚РµР»СЊСЃС‚РІРѕ' : null,
+                        ),
+                        const SizedBox(height: 16),
+                        FormField<List<int>>(
+                          initialValue: _authorIds,
+                          validator: (v) =>
+                              (_authorIds.isEmpty) ? 'Р’С‹Р±РµСЂРёС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРЅРѕРіРѕ Р°РІС‚РѕСЂР°' : null,
+                          builder: (state) {
+                            return InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'РђРІС‚РѕСЂС‹ (РњРЅРѕРіРёРµ РєРѕ РјРЅРѕРіРёРј) *',
+                                border: const OutlineInputBorder(),
+                                errorText: state.errorText,
+                              ),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _authors.map((a) {
+                                  final selected = _authorIds.contains(a.id);
+                                  return FilterChip(
+                                    label: Text(a.fullName),
+                                    selected: selected,
+                                    onSelected: (val) {
+                                      setState(() {
+                                        val ? _authorIds.add(a.id) : _authorIds.remove(a.id);
+                                      });
+                                      state.didChange(_authorIds);
+                                      _markDirty();
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        FormField<List<int>>(
+                          initialValue: _genreIds,
+                          validator: (v) =>
+                              (_genreIds.isEmpty) ? 'Р’С‹Р±РµСЂРёС‚Рµ С…РѕС‚СЏ Р±С‹ РѕРґРёРЅ Р¶Р°РЅСЂ' : null,
+                          builder: (state) {
+                            return InputDecorator(
+                              decoration: InputDecoration(
+                                labelText: 'Р–Р°РЅСЂС‹ (РњРЅРѕРіРёРµ РєРѕ РјРЅРѕРіРёРј) *',
+                                border: const OutlineInputBorder(),
+                                errorText: state.errorText,
+                              ),
+                              child: Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: _genres.map((g) {
+                                  final selected = _genreIds.contains(g.id);
+                                  return FilterChip(
+                                    label: Text(g.name),
+                                    selected: selected,
+                                    onSelected: (val) {
+                                      setState(() {
+                                        val ? _genreIds.add(g.id) : _genreIds.remove(g.id);
+                                      });
+                                      state.didChange(_genreIds);
+                                      _markDirty();
+                                    },
+                                  );
+                                }).toList(),
+                              ),
+                            );
+                          },
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _copiesTotalController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Р’СЃРµРіРѕ СЌРєР·. *',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: AppValidators.positiveInt,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _copiesAvailableController,
+                                decoration: const InputDecoration(
+                                  labelText: 'Р’ РЅР°Р»РёС‡РёРё *',
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                validator: (v) => AppValidators.intRange(
+                                  v,
+                                  0,
+                                  int.tryParse(_copiesTotalController.text) ?? 9999,
+                                  'РќРµ РјРѕР¶РµС‚ РїСЂРµРІС‹С€Р°С‚СЊ РѕР±С‰РµРµ С‡РёСЃР»Рѕ',
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 24),
+                        FilledButton.icon(
+                          icon: _saving
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.save),
+                          label: Text(_saving ? 'РЎРѕС…СЂР°РЅРµРЅРёРµ...' : (widget.isEditing ? 'РЎРѕС…СЂР°РЅРёС‚СЊ' : 'РЎРѕР·РґР°С‚СЊ РєРЅРёРіСѓ')),
+                          style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                          onPressed: _saving ? null : _submit,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+
+import '../data/seed_data.dart';
+import '../models/genre.dart';
+import '../models/publisher.dart';
+import '../repositories/book_repository.dart';
+import '../repositories/cached_dictionary_repository.dart';
+import '../state/book_list_notifier.dart';
+import '../widgets/responsive_view.dart';
+
+class BookListScreen extends StatefulWidget {
+  final Map<String, String>? queryParams;
+  const BookListScreen({super.key, this.queryParams});
+
+  @override
+  State<BookListScreen> createState() => _BookListScreenState();
+}
+
+class _BookListScreenState extends State<BookListScreen> {
+  final _searchController = TextEditingController();
+  final _yearFromController = TextEditingController();
+  final _yearToController = TextEditingController();
+  Timer? _debounceTimer;
+
+  List<Publisher> _publishers = seedPublishers;
+  List<Genre> _genres = seedGenres;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadDictionaries();
+    _applyQueryParams(widget.queryParams);
+  }
+
+  @override
+  void didUpdateWidget(covariant BookListScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.queryParams != oldWidget.queryParams) {
+      _applyQueryParams(widget.queryParams);
+    }
+  }
+
+  void _applyQueryParams(Map<String, String>? params) {
+    if (params == null) return;
+    final delay = int.tryParse(params['__delay'] ?? '');
+    final fail = int.tryParse(params['__fail'] ?? '');
+    if (delay != null || fail != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<BookListNotifier>().updateQuery(
+              (q) => q.copyWith(delay: delay, fail: fail),
+            );
+      });
+    }
+  }
+
+  Future<void> _loadDictionaries() async {
+    final dictRepo = context.read<CachedDictionaryRepository>();
+    final pubs = await dictRepo.getPublishers();
+    final gens = await dictRepo.getGenres();
+    if (!mounted) return;
+    setState(() {
+      _publishers = pubs;
+      _genres = gens;
+    });
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _searchController.dispose();
+    _yearFromController.dispose();
+    _yearToController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      context.read<BookListNotifier>().updateQuery(
+            (q) => q.copyWith(search: value, page: 1),
+          );
+    });
+  }
+
+  String _getGenreNames(List<int> genreIds) {
+    if (genreIds.isEmpty) return 'вЂ”';
+    final names = genreIds
+        .map((id) => _genres.firstWhere((g) => g.id == id, orElse: () => Genre(id: id, name: 'Р–Р°РЅСЂ #$id')).name)
+        .toList();
+    return names.isEmpty ? 'вЂ”' : names.join(', ');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final notifier = context.watch<BookListNotifier>();
+    final query = notifier.query;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('РљР°С‚Р°Р»РѕРі РєРЅРёРі'),
+        actions: _buildResponsiveAppBarActions(context, screenWidth, notifier),
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1400),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: InputDecoration(
+                              prefixIcon: const Icon(Icons.search),
+                              hintText: 'РџРѕРёСЃРє РїРѕ РЅР°Р·РІР°РЅРёСЋ РёР»Рё ISBN...',
+                              border: const OutlineInputBorder(),
+                              suffixIcon: _searchController.text.isNotEmpty
+                                  ? IconButton(
+                                      icon: const Icon(Icons.clear),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        _onSearchChanged('');
+                                      },
+                                    )
+                                  : null,
+                            ),
+                            onChanged: _onSearchChanged,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        OutlinedButton(
+                          style: OutlinedButton.styleFrom(
+                            backgroundColor: query.showDeleted ? Colors.grey.shade300 : null,
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          ),
+                          onPressed: () {
+                            notifier.updateQuery(
+                              (q) => q.copyWith(showDeleted: !q.showDeleted, page: 1),
+                            );
+                          },
+                          child: const Text('РЈРґР°Р»С‘РЅРЅС‹Рµ'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          DropdownButton<int?>(
+                            value: query.genreId,
+                            hint: const Text('Р’СЃРµ Р¶Р°РЅСЂС‹'),
+                            items: [
+                              const DropdownMenuItem(value: null, child: Text('Р’СЃРµ Р¶Р°РЅСЂС‹')),
+                              ..._genres.map((g) => DropdownMenuItem(value: g.id, child: Text(g.name))),
+                            ],
+                            onChanged: (val) {
+                              notifier.updateQuery((q) => q.copyWith(genreId: val, page: 1));
+                            },
+                          ),
+                          DropdownButton<int?>(
+                            value: query.publisherId,
+                            hint: const Text('Р’СЃРµ РёР·РґР°С‚РµР»СЊСЃС‚РІР°'),
+                            items: [
+                              const DropdownMenuItem(value: null, child: Text('Р’СЃРµ РёР·РґР°С‚РµР»СЊСЃС‚РІР°')),
+                              ..._publishers.map((p) => DropdownMenuItem(value: p.id, child: Text(p.name))),
+                            ],
+                            onChanged: (val) {
+                              notifier.updateQuery((q) => q.copyWith(publisherId: val, page: 1));
+                            },
+                          ),
+                          SizedBox(
+                            width: 100,
+                            child: TextField(
+                              controller: _yearFromController,
+                              decoration: const InputDecoration(labelText: 'Р“РѕРґ РѕС‚', border: OutlineInputBorder(), isDense: true),
+                              keyboardType: TextInputType.number,
+                              onSubmitted: (v) {
+                                notifier.updateQuery((q) => q.copyWith(yearFrom: int.tryParse(v), page: 1));
+                              },
+                            ),
+                          ),
+                          SizedBox(
+                            width: 100,
+                            child: TextField(
+                              controller: _yearToController,
+                              decoration: const InputDecoration(labelText: 'Р“РѕРґ РґРѕ', border: OutlineInputBorder(), isDense: true),
+                              keyboardType: TextInputType.number,
+                              onSubmitted: (v) {
+                                notifier.updateQuery((q) => q.copyWith(yearTo: int.tryParse(v), page: 1));
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: _buildContent(context, notifier),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildResponsiveAppBarActions(BuildContext context, double screenWidth, BookListNotifier notifier) {
+    if (screenWidth < 768) {
+      return [
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'РќРѕРІР°СЏ РєРЅРёРіР°',
+          onPressed: () => context.go('/books/new'),
+        ),
+        PopupMenuButton<String>(
+          onSelected: (route) {
+            if (route == 'reload') {
+              notifier.reload();
+            } else {
+              context.go(route);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(value: '/books/new', child: Text('РќРѕРІР°СЏ РєРЅРёРіР°')),
+            const PopupMenuItem(value: '/', child: Text('Р“Р»Р°РІРЅР°СЏ')),
+            const PopupMenuItem(value: 'reload', child: Text('РћР±РЅРѕРІРёС‚СЊ')),
+          ],
+        ),
+        const SizedBox(width: 8),
+      ];
+    }
+
+    return [
+      FilledButton.icon(
+        icon: const Icon(Icons.add),
+        label: const Text('РќРѕРІР°СЏ РєРЅРёРіР°'),
+        onPressed: () => context.go('/books/new'),
+      ),
+      const SizedBox(width: 8),
+      IconButton(
+        tooltip: 'РћР±РЅРѕРІРёС‚СЊ РґР°РЅРЅС‹Рµ',
+        icon: const Icon(Icons.refresh),
+        onPressed: () => notifier.reload(),
+      ),
+      const SizedBox(width: 16),
+    ];
+  }
+
+  Widget _buildContent(BuildContext context, BookListNotifier notifier) {
+    if (notifier.isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              width: 56,
+              height: 56,
+              child: CircularProgressIndicator(strokeWidth: 4.0),
+            ),
+            SizedBox(height: 24),
+            Text(
+              'Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°...',
+              style: TextStyle(fontSize: 16, color: Colors.black54),
+            ),
+          ],
+        ),
+      );
+    }
+
+    if (notifier.errorMessage != null) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.cloud_off, size: 72, color: Colors.redAccent),
+              const SizedBox(height: 16),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 500),
+                child: Text(
+                  notifier.errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.redAccent),
+                ),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                icon: const Icon(Icons.refresh),
+                label: const Text('РџРѕРІС‚РѕСЂРёС‚СЊ'),
+                onPressed: () => notifier.reload(),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (notifier.items.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.search_off, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'РџРѕ Р·Р°РґР°РЅРЅС‹Рј РєСЂРёС‚РµСЂРёСЏРј РєРЅРёРі РЅРµ РЅР°Р№РґРµРЅРѕ',
+              style: TextStyle(fontSize: 16, color: Colors.grey),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        Expanded(
+          child: ResponsiveView(
+            breakpoint: 768,
+            mobileCards: _buildMobileCards(context, notifier),
+            desktopTable: _buildDesktopTable(context, notifier),
+          ),
+        ),
+        _buildPaginationBar(context, notifier),
+      ],
+    );
+  }
+
+  Widget _buildMobileCards(BuildContext context, BookListNotifier notifier) {
+    return ListView.separated(
+      padding: const EdgeInsets.all(12),
+      itemCount: notifier.items.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 8),
+      itemBuilder: (context, index) {
+        final book = notifier.items[index];
+        return Card(
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        book.title,
+                        style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.blue, size: 20),
+                          onPressed: () => context.go('/books/${book.id}/edit'),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.orange, size: 20),
+                          onPressed: () async {
+                            await context.read<BookRepository>().softDelete(book.id);
+                            notifier.reload();
+                          },
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 4),
+                Text('ISBN: ${book.isbn}', style: const TextStyle(color: Colors.black87)),
+                Text('Р“РѕРґ: ${book.year} | РЎС‚СЂР°РЅРёС†: ${book.pages}', style: const TextStyle(color: Colors.black54)),
+                Text('Р–Р°РЅСЂС‹: ${_getGenreNames(book.genreIds)}', style: const TextStyle(color: Colors.black54)),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildDesktopTable(BuildContext context, BookListNotifier notifier) {
+    return SizedBox(
+      width: double.infinity,
+      child: DataTable(
+        sortColumnIndex: _getSortColumnIndex(notifier.query.sortField),
+        sortAscending: notifier.query.sortAscending,
+        columns: [
+          DataColumn(
+            label: const Text('РќР°Р·РІР°РЅРёРµ'),
+            onSort: (_, asc) => _changeSort('title', asc),
+          ),
+          const DataColumn(label: Text('ISBN')),
+          DataColumn(
+            label: const Text('Р“РѕРґ'),
+            onSort: (_, asc) => _changeSort('year', asc),
+          ),
+          DataColumn(
+            label: const Text('РЎС‚СЂР°РЅРёС†'),
+            onSort: (_, asc) => _changeSort('pages', asc),
+          ),
+          const DataColumn(label: Text('Р–Р°РЅСЂС‹')),
+          const DataColumn(label: Text('Р”РµР№СЃС‚РІРёСЏ')),
+        ],
+        rows: notifier.items.map((book) {
+          return DataRow(
+            cells: [
+              DataCell(
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 320),
+                  child: Text(book.title, overflow: TextOverflow.ellipsis),
+                ),
+              ),
+              DataCell(Text(book.isbn)),
+              DataCell(Text('${book.year}')),
+              DataCell(Text('${book.pages}')),
+              DataCell(Text(_getGenreNames(book.genreIds))),
+              DataCell(
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.edit, color: Colors.blue),
+                      tooltip: 'Р РµРґР°РєС‚РёСЂРѕРІР°С‚СЊ',
+                      onPressed: () => context.go('/books/${book.id}/edit'),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_outline, color: Colors.orange),
+                      tooltip: 'Р’ РєРѕСЂР·РёРЅСѓ',
+                      onPressed: () async {
+                        await context.read<BookRepository>().softDelete(book.id);
+                        notifier.reload();
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.delete_forever, color: Colors.red),
+                      tooltip: 'РЈРґР°Р»РёС‚СЊ РЅР°РІСЃРµРіРґР°',
+                      onPressed: () async {
+                        await context.read<BookRepository>().hardDelete(book.id);
+                        notifier.reload();
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  int? _getSortColumnIndex(String field) {
+    switch (field) {
+      case 'title':
+        return 0;
+      case 'year':
+        return 2;
+      case 'pages':
+        return 3;
+      default:
+        return null;
+    }
+  }
+
+  void _changeSort(String field, bool ascending) {
+    context.read<BookListNotifier>().updateQuery(
+          (q) => q.copyWith(sortField: field, sortAscending: ascending, page: 1),
+        );
+  }
+
+  Widget _buildPaginationBar(BuildContext context, BookListNotifier notifier) {
+    final query = notifier.query;
+    final totalPages = (notifier.total / query.size).ceil().clamp(1, 9999);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        border: Border(top: BorderSide(color: Colors.grey.shade300)),
+      ),
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('РЎС‚СЂРѕРє: '),
+              DropdownButton<int>(
+                value: query.size,
+                items: const [
+                  DropdownMenuItem(value: 5, child: Text('5')),
+                  DropdownMenuItem(value: 10, child: Text('10')),
+                  DropdownMenuItem(value: 20, child: Text('20')),
+                ],
+                onChanged: (val) {
+                  if (val != null) {
+                    notifier.updateQuery((q) => q.copyWith(size: val, page: 1));
+                  }
+                },
+              ),
+            ],
+          ),
+          Text('Р’СЃРµРіРѕ: ${notifier.total}'),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.first_page),
+                onPressed: query.page > 1 ? () => notifier.updateQuery((q) => q.copyWith(page: 1)) : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: query.page > 1 ? () => notifier.updateQuery((q) => q.copyWith(page: q.page - 1)) : null,
+              ),
+              Text('РЎС‚СЂ. ${query.page} РёР· $totalPages'),
+              IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: query.page < totalPages ? () => notifier.updateQuery((q) => q.copyWith(page: q.page + 1)) : null,
+              ),
+              IconButton(
+                icon: const Icon(Icons.last_page),
+                onPressed: query.page < totalPages ? () => notifier.updateQuery((q) => q.copyWith(page: totalPages)) : null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../models/role.dart';
+import '../state/auth_notifier.dart';
+
+class DashboardScreen extends StatelessWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthNotifier>();
+    final user = auth.user;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Р‘РёР±Р»РёРѕС‚РµС‡РЅР°СЏ СЃРёСЃС‚РµРјР°'),
+        actions: [
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                '${user?.fullName ?? "РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ"} (${user?.role.label ?? ""})',
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Р’С‹Р№С‚Рё РёР· СЃРёСЃС‚РµРјС‹',
+            icon: const Icon(Icons.logout),
+            onPressed: () => auth.logout(),
+          ),
+          const SizedBox(width: 16),
+        ],
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(32),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 800),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Card(
+                  color: Colors.teal.shade50,
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Row(
+                      children: [
+                        const CircleAvatar(
+                          radius: 32,
+                          backgroundColor: Colors.teal,
+                          child: Icon(Icons.person, size: 36, color: Colors.white),
+                        ),
+                        const SizedBox(width: 20),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                user?.fullName ?? '',
+                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                              ),
+                              const SizedBox(height: 4),
+                              Text('Р›РѕРіРёРЅ: @${user?.username ?? ""} вЂў РЈСЂРѕРІРµРЅСЊ РґРѕСЃС‚СѓРїР°: ${user?.role.label}'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text('Р”РѕСЃС‚СѓРїРЅС‹Рµ С„СѓРЅРєС†РёРѕРЅР°Р»СЊРЅС‹Рµ РјРѕРґСѓР»Рё:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 16,
+                  runSpacing: 16,
+                  children: [
+                    _buildNavCard(
+                      context,
+                      title: 'РљР°С‚Р°Р»РѕРі РєРЅРёРі',
+                      subtitle: 'РџРѕРёСЃРє, РїСЂРѕСЃРјРѕС‚СЂ Рё С„РёР»СЊС‚СЂР°С†РёСЏ',
+                      icon: Icons.menu_book,
+                      color: Colors.blue,
+                      route: '/books',
+                    ),
+                    if (auth.has(Role.reader))
+                      _buildNavCard(
+                        context,
+                        title: 'РњРѕРё РІС‹РґР°С‡Рё',
+                        subtitle: 'РЎРїРёСЃРѕРє РєРЅРёРі РЅР° СЂСѓРєР°С… Рё РїСЂРѕРґР»РµРЅРёРµ',
+                        icon: Icons.bookmark,
+                        color: Colors.teal,
+                        route: '/my-loans',
+                      ),
+                    if (auth.has(Role.librarian))
+                      _buildNavCard(
+                        context,
+                        title: 'РќРѕРІР°СЏ РєРЅРёРіР°',
+                        subtitle: 'Р’РЅРµСЃРµРЅРёРµ РёР·РґР°РЅРёР№ РІ С„РѕРЅРґ (Р‘РёР±Р»РёРѕС‚РµРєР°СЂСЊ)',
+                        icon: Icons.add_box,
+                        color: Colors.orange,
+                        route: '/books/new',
+                      ),
+                    if (auth.has(Role.admin))
+                      _buildNavCard(
+                        context,
+                        title: 'РџРѕР»СЊР·РѕРІР°С‚РµР»Рё Рё СЂРѕР»Рё',
+                        subtitle: 'РђРґРјРёРЅРёСЃС‚СЂРёСЂРѕРІР°РЅРёРµ СѓС‡РµС‚РЅС‹С… Р·Р°РїРёСЃРµР№',
+                        icon: Icons.admin_panel_settings,
+                        color: Colors.purple,
+                        route: '/admin/users',
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNavCard(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+    required String route,
+  }) {
+    return SizedBox(
+      width: 380,
+      child: Card(
+        elevation: 2,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => context.go(route),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(30),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, size: 32, color: color),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 4),
+                      Text(subtitle, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../state/auth_notifier.dart';
+
+class ForbiddenScreen extends StatelessWidget {
+  const ForbiddenScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final auth = context.watch<AuthNotifier>();
+
+    return Scaffold(
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.gpp_bad, size: 80, color: Colors.redAccent),
+                const SizedBox(height: 16),
+                const Text(
+                  'Р”РѕСЃС‚СѓРї РѕРіСЂР°РЅРёС‡РµРЅ (403)',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'РЈ РІР°С€РµР№ СЂРѕР»Рё В«${auth.user?.role.label ?? "Р“РѕСЃС‚СЊ"}В» РЅРµРґРѕСЃС‚Р°С‚РѕС‡РЅРѕ РїСЂР°РІ РґР»СЏ РїСЂРѕСЃРјРѕС‚СЂР° РґР°РЅРЅРѕРіРѕ СЂР°Р·РґРµР»Р° РёР»Рё РІС‹РїРѕР»РЅРµРЅРёСЏ РѕРїРµСЂР°С†РёРё.',
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontSize: 16, color: Colors.black54),
+                ),
+                const SizedBox(height: 24),
+                FilledButton.icon(
+                  onPressed: () => context.go('/'),
+                  icon: const Icon(Icons.arrow_back),
+                  label: const Text('Р’РµСЂРЅСѓС‚СЊСЃСЏ РЅР° РіР»Р°РІРЅСѓСЋ'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../state/auth_notifier.dart';
+
+class LoginScreen extends StatefulWidget {
+  final String? from;
+  const LoginScreen({super.key, this.from});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _loading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    setState(() => _errorMessage = null);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    setState(() => _loading = true);
+    final auth = context.read<AuthNotifier>();
+    final router = GoRouter.of(context);
+
+    try {
+      await auth.login(
+        _usernameController.text.trim(),
+        _passwordController.text,
+      );
+
+      final target = widget.from != null && widget.from!.isNotEmpty
+          ? Uri.decodeComponent(widget.from!)
+          : '/';
+      router.go(target);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        setState(() => _errorMessage = 'РќРµРІРµСЂРЅРѕРµ РёРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ РёР»Рё РїР°СЂРѕР»СЊ');
+      } else {
+        setState(() => _errorMessage = 'РћС€РёР±РєР° РїРѕРґРєР»СЋС‡РµРЅРёСЏ Рє СЃРµСЂРІРµСЂСѓ Р°РІС‚РѕСЂРёР·Р°С†РёРё');
+      }
+    } catch (e) {
+      setState(() => _errorMessage = 'РЎР±РѕР№ РїСЂРё Р°РІС‚РѕСЂРёР·Р°С†РёРё: $e');
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: Card(
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(Icons.local_library, size: 56, color: Colors.teal),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Р’С…РѕРґ РІ СЃРёСЃС‚РµРјСѓ',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'РЈРєР°Р¶РёС‚Рµ СѓС‡РµС‚РЅС‹Рµ РґР°РЅРЅС‹Рµ РґР»СЏ РґРѕСЃС‚СѓРїР°',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.black54),
+                      ),
+                      const SizedBox(height: 24),
+                      if (_errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      TextFormField(
+                        controller: _usernameController,
+                        decoration: const InputDecoration(
+                          labelText: 'РРјСЏ РїРѕР»СЊР·РѕРІР°С‚РµР»СЏ',
+                          prefixIcon: Icon(Icons.person),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'Р’РІРµРґРёС‚Рµ Р»РѕРіРёРЅ'
+                            : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'РџР°СЂРѕР»СЊ',
+                          prefixIcon: Icon(Icons.lock),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (v) => (v == null || v.isEmpty)
+                            ? 'Р’РІРµРґРёС‚Рµ РїР°СЂРѕР»СЊ'
+                            : null,
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: _loading ? null : _submit,
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : const Text('Р’РѕР№С‚Рё'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => context.go('/register'),
+                        child: const Text('РќРµС‚ СѓС‡РµС‚РЅРѕР№ Р·Р°РїРёСЃРё? Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°С‚СЊСЃСЏ'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../repositories/app_repositories.dart';
+
+class PublisherListScreen extends StatefulWidget {
+  const PublisherListScreen({super.key});
+
+  @override
+  State<PublisherListScreen> createState() => _PublisherListScreenState();
+}
+
+class _PublisherListScreenState extends State<PublisherListScreen> {
+  void _attemptDelete(BuildContext context, int publisherId, String name) {
+    final repo = context.read<PersistentLibraryRepository>();
+    final linkedBooks = repo.countBooksByPublisher(publisherId);
+
+    if (linkedBooks > 0) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          icon: const Icon(Icons.warning, color: Colors.orange, size: 48),
+          title: const Text('РћС‚РєР°Р· РІ СѓРґР°Р»РµРЅРёРё'),
+          content: Text(
+            'РќРµРІРѕР·РјРѕР¶РЅРѕ СѓРґР°Р»РёС‚СЊ РёР·РґР°С‚РµР»СЊСЃС‚РІРѕ "$name".\nРљ РЅРµРјСѓ РїСЂРёРІСЏР·Р°РЅРѕ $linkedBooks РєРЅРёРі(Рё) РІ РєР°С‚Р°Р»РѕРіРµ.\nРЎРЅР°С‡Р°Р»Р° РїРµСЂРµРЅРµСЃРёС‚Рµ РёР»Рё СѓРґР°Р»РёС‚Рµ СЌС‚Рё РєРЅРёРіРё.',
+          ),
+          actions: [
+            FilledButton(onPressed: () => Navigator.pop(ctx), child: const Text('РџРѕРЅСЏС‚РЅРѕ')),
+          ],
+        ),
+      );
+    } else {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('РЈРґР°Р»РµРЅРёРµ РёР·РґР°С‚РµР»СЊСЃС‚РІР°'),
+          content: Text('РЈРґР°Р»РёС‚СЊ РёР·РґР°С‚РµР»СЊСЃС‚РІРѕ "$name"?'),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('РћС‚РјРµРЅР°')),
+            FilledButton(
+              onPressed: () async {
+                repo.publishers.removeWhere((p) => p.id == publisherId);
+                await repo.savePublishers();
+                if (ctx.mounted) Navigator.pop(ctx);
+                setState(() {});
+              },
+              child: const Text('РЈРґР°Р»РёС‚СЊ'),
+            ),
+          ],
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.watch<PersistentLibraryRepository>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('РР·РґР°С‚РµР»СЊСЃС‚РІР°'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/books'),
+        ),
+      ),
+      body: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: repo.publishers.length,
+        itemBuilder: (ctx, i) {
+          final p = repo.publishers[i];
+          final bookCount = repo.countBooksByPublisher(p.id);
+          return Card(
+            child: ListTile(
+              leading: const Icon(Icons.business),
+              title: Text(p.name),
+              subtitle: Text('Р“РѕСЂРѕРґ: ${p.city} | РЎРІСЏР·Р°РЅРЅС‹С… РєРЅРёРі: $bookCount'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: () => _attemptDelete(context, p.id, p.name),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../models/library_card.dart';
+import '../models/reader.dart';
+import '../repositories/app_repositories.dart';
+import '../utils/validators.dart';
+
+class ReaderFormScreen extends StatefulWidget {
+  final int? id;
+  const ReaderFormScreen({super.key, this.id});
+
+  bool get isEditing => id != null;
+
+  @override
+  State<ReaderFormScreen> createState() => _ReaderFormScreenState();
+}
+
+class _ReaderFormScreenState extends State<ReaderFormScreen> {
+  final _formKey = GlobalKey<FormState>();
+
+  late TextEditingController _fullNameController;
+  late TextEditingController _emailController;
+  late TextEditingController _phoneController;
+  late TextEditingController _cardNumberController;
+  bool _cardIsActive = true;
+
+  bool _isDirty = false;
+  String? _emailCustomError;
+
+  @override
+  void initState() {
+    super.initState();
+    final repo = context.read<PersistentLibraryRepository>();
+    Reader? existing;
+    if (widget.isEditing) {
+      existing = repo.readers.cast<Reader?>().firstWhere(
+            (r) => r?.id == widget.id,
+            orElse: () => null,
+          );
+    }
+
+    _fullNameController = TextEditingController(text: existing?.fullName ?? '');
+    _emailController = TextEditingController(text: existing?.email ?? '');
+    _phoneController = TextEditingController(text: existing?.phone ?? '+7 (999) ');
+    _cardNumberController = TextEditingController(
+      text: existing?.card.cardNumber ?? 'LC-${DateTime.now().millisecondsSinceEpoch % 10000}',
+    );
+    _cardIsActive = existing?.card.isActive ?? true;
+  }
+
+  void _markDirty() {
+    if (!_isDirty) setState(() => _isDirty = true);
+  }
+
+  Future<void> _submit() async {
+    setState(() => _emailCustomError = null);
+    final repo = context.read<PersistentLibraryRepository>();
+
+    final emailVal = _emailController.text.trim();
+    if (!repo.isEmailUnique(emailVal, widget.id)) {
+      setState(() => _emailCustomError = 'Р§РёС‚Р°С‚РµР»СЊ СЃ С‚Р°РєРёРј email СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚');
+      return;
+    }
+
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+
+    final reader = Reader(
+      id: widget.id ?? 0,
+      fullName: _fullNameController.text.trim(),
+      email: emailVal,
+      phone: _phoneController.text.trim(),
+      card: LibraryCard(
+        cardNumber: _cardNumberController.text.trim(),
+        issuedAt: DateTime.now(),
+        isActive: _cardIsActive,
+      ),
+    );
+
+    await repo.saveReader(reader);
+    if (!mounted) return;
+    _isDirty = false;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(widget.isEditing ? 'Р”Р°РЅРЅС‹Рµ С‡РёС‚Р°С‚РµР»СЏ РѕР±РЅРѕРІР»РµРЅС‹' : 'Р§РёС‚Р°С‚РµР»СЊ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ')),
+    );
+    context.go('/readers');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(widget.isEditing ? 'Р РµРґР°РєС‚РёСЂРѕРІР°РЅРёРµ С‡РёС‚Р°С‚РµР»СЏ' : 'РќРѕРІС‹Р№ С‡РёС‚Р°С‚РµР»СЊ'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/readers'),
+        ),
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 580),
+            child: Card(
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Form(
+                  key: _formKey,
+                  onChanged: _markDirty,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _fullNameController,
+                        decoration: const InputDecoration(labelText: 'Р¤РРћ С‡РёС‚Р°С‚РµР»СЏ *', border: OutlineInputBorder()),
+                        validator: (v) => AppValidators.requiredField(v) ?? AppValidators.minLength(v, 3),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _emailController,
+                        decoration: InputDecoration(
+                          labelText: 'Р­Р»РµРєС‚СЂРѕРЅРЅР°СЏ РїРѕС‡С‚Р° *',
+                          border: const OutlineInputBorder(),
+                          errorText: _emailCustomError,
+                        ),
+                        validator: AppValidators.email,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _phoneController,
+                        decoration: const InputDecoration(labelText: 'РўРµР»РµС„РѕРЅ *', border: OutlineInputBorder()),
+                        validator: AppValidators.requiredField,
+                      ),
+                      const SizedBox(height: 24),
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Р§РёС‚Р°С‚РµР»СЊСЃРєРёР№ Р±РёР»РµС‚ (РЎРІСЏР·СЊ 1:1)', style: Theme.of(context).textTheme.titleSmall),
+                            const SizedBox(height: 12),
+                            TextFormField(
+                              controller: _cardNumberController,
+                              decoration: const InputDecoration(labelText: 'РќРѕРјРµСЂ Р±РёР»РµС‚Р° *', border: OutlineInputBorder()),
+                              validator: AppValidators.requiredField,
+                            ),
+                            const SizedBox(height: 12),
+                            SwitchListTile(
+                              title: const Text('Р‘РёР»РµС‚ Р°РєС‚РёРІРµРЅ'),
+                              value: _cardIsActive,
+                              onChanged: (val) {
+                                setState(() => _cardIsActive = val);
+                                _markDirty();
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton.icon(
+                        icon: const Icon(Icons.save),
+                        label: Text(widget.isEditing ? 'РЎРѕС…СЂР°РЅРёС‚СЊ' : 'Р—Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°С‚СЊ С‡РёС‚Р°С‚РµР»СЏ'),
+                        style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                        onPressed: _submit,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../repositories/app_repositories.dart';
+
+class ReaderListScreen extends StatefulWidget {
+  const ReaderListScreen({super.key});
+
+  @override
+  State<ReaderListScreen> createState() => _ReaderListScreenState();
+}
+
+class _ReaderListScreenState extends State<ReaderListScreen> {
+  @override
+  Widget build(BuildContext context) {
+    final repo = context.watch<PersistentLibraryRepository>();
+    final readers = repo.readers.where((r) => !r.isDeleted).toList();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Р§РёС‚Р°С‚РµР»Рё Р±РёР±Р»РёРѕС‚РµРєРё'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/books'),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        icon: const Icon(Icons.person_add),
+        label: const Text('РќРѕРІС‹Р№ С‡РёС‚Р°С‚РµР»СЊ'),
+        onPressed: () => context.go('/readers/new'),
+      ),
+      body: readers.isEmpty
+          ? const Center(child: Text('Р§РёС‚Р°С‚РµР»Рё РЅРµ РЅР°Р№РґРµРЅС‹'))
+          : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: readers.length,
+              itemBuilder: (ctx, i) {
+                final r = readers[i];
+                return Card(
+                  child: ListTile(
+                    leading: const CircleAvatar(child: Icon(Icons.person)),
+                    title: Text(r.fullName),
+                    subtitle: Text('Email: ${r.email} | Р‘РёР»РµС‚: ${r.card.cardNumber} (${r.card.isActive ? 'РђРєС‚РёРІРµРЅ' : 'Р—Р°Р±Р»РѕРєРёСЂРѕРІР°РЅ'})'),
+                    trailing: IconButton(
+                      icon: const Icon(Icons.edit),
+                      onPressed: () => context.go('/readers/${r.id}/edit'),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+
+class ReaderLoansScreen extends StatelessWidget {
+  const ReaderLoansScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('РњРѕРё РІС‹РґР°С‡Рё Рё РїСЂРѕРґР»РµРЅРёРµ СЃСЂРѕРєР° (Р§РёС‚Р°С‚РµР»СЊ)'),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => context.go('/'),
+        ),
+      ),
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Card(
+              child: ListView(
+                shrinkWrap: true,
+                padding: const EdgeInsets.all(16),
+                children: [
+                  ListTile(
+                    leading: const Icon(Icons.book, color: Colors.teal),
+                    title: const Text('1984 вЂ” Р”Р¶РѕСЂРґР¶ РћСЂСѓСЌР»Р»'),
+                    subtitle: const Text('РЎСЂРѕРє РІРѕР·РІСЂР°С‚Р°: РґРѕ 28 СЃРµРЅС‚СЏР±СЂСЏ 2026 Рі.'),
+                    trailing: OutlinedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('РЎСЂРѕРє РїСЂРѕРґР»РµРЅ РЅР° 14 РґРЅРµР№')),
+                        );
+                      },
+                      child: const Text('РџСЂРѕРґР»РёС‚СЊ'),
+                    ),
+                  ),
+                  const Divider(),
+                  ListTile(
+                    leading: const Icon(Icons.book, color: Colors.teal),
+                    title: const Text('РњР°СЃС‚РµСЂ Рё РњР°СЂРіР°СЂРёС‚Р° вЂ” Рњ. Р‘СѓР»РіР°РєРѕРІ'),
+                    subtitle: const Text('РЎСЂРѕРє РІРѕР·РІСЂР°С‚Р°: РґРѕ 05 РѕРєС‚СЏР±СЂСЏ 2026 Рі.'),
+                    trailing: OutlinedButton(
+                      onPressed: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('РЎСЂРѕРє РїСЂРѕРґР»РµРЅ РЅР° 14 РґРЅРµР№')),
+                        );
+                      },
+                      child: const Text('РџСЂРѕРґР»РёС‚СЊ'),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
+import '../state/auth_notifier.dart';
+
+class RegisterScreen extends StatefulWidget {
+  const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  final _formKey = GlobalKey<FormState>();
+  final _usernameController = TextEditingController();
+  final _fullNameController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  bool _loading = false;
+  String? _errorMessage;
+
+  bool _hasMinLength = false;
+  bool _hasDigit = false;
+  bool _hasSpecialChar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_validatePasswordLive);
+  }
+
+  void _validatePasswordLive() {
+    final text = _passwordController.text;
+    setState(() {
+      _hasMinLength = text.length >= 8;
+      _hasDigit = RegExp(r'\d').hasMatch(text);
+      _hasSpecialChar = RegExp(r'[!@#\$%^&*(),.?":{}|<>]').hasMatch(text);
+    });
+  }
+
+  @override
+  void dispose() {
+    _passwordController.removeListener(_validatePasswordLive);
+    _usernameController.dispose();
+    _fullNameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildRuleItem(String text, bool satisfied) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(
+            satisfied ? Icons.check_circle : Icons.circle_outlined,
+            size: 16,
+            color: satisfied ? Colors.green : Colors.grey,
+          ),
+          const SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: satisfied ? Colors.green.shade700 : Colors.black54,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _extractError(dynamic e) {
+    if (e is DioException) {
+      dynamic data = e.response?.data;
+      if (data is String) {
+        try { data = jsonDecode(data); } catch (_) {}
+      }
+      if (data is Map && data['message'] != null) {
+        return data['message'].toString();
+      }
+      if (e.response?.statusCode == 409) {
+        return 'РџРѕР»СЊР·РѕРІР°С‚РµР»СЊ СЃ С‚Р°РєРёРј Р»РѕРіРёРЅРѕРј СѓР¶Рµ Р·Р°СЂРµРіРёСЃС‚СЂРёСЂРѕРІР°РЅ';
+      }
+      return 'РћС€РёР±РєР° СЃРµСЂРІРµСЂР° (${e.response?.statusCode ?? "СЃРµС‚СЊ"})';
+    }
+    return 'РћС€РёР±РєР°: $e';
+  }
+
+  Future<void> _submit() async {
+    setState(() => _errorMessage = null);
+    if (!(_formKey.currentState?.validate() ?? false)) return;
+
+    if (!_hasMinLength || !_hasDigit || !_hasSpecialChar) {
+      setState(() => _errorMessage = 'РџР°СЂРѕР»СЊ РЅРµ СѓРґРѕРІР»РµС‚РІРѕСЂСЏРµС‚ РІСЃРµРј С‚СЂРµР±РѕРІР°РЅРёСЏРј Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё');
+      return;
+    }
+
+    setState(() => _loading = true);
+    final auth = context.read<AuthNotifier>();
+    final router = GoRouter.of(context);
+
+    try {
+      await auth.register(
+        _usernameController.text.trim(),
+        _passwordController.text,
+        _fullNameController.text.trim(),
+      );
+      router.go('/');
+    } catch (e) {
+      setState(() => _errorMessage = _extractError(e));
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 440),
+            child: Card(
+              elevation: 3,
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Icon(Icons.person_add, size: 56, color: Colors.teal),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Р РµРіРёСЃС‚СЂР°С†РёСЏ С‡РёС‚Р°С‚РµР»СЏ',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 24),
+                      if (_errorMessage != null) ...[
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Text(
+                            _errorMessage!,
+                            style: const TextStyle(color: Colors.red),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      TextFormField(
+                        controller: _usernameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Р›РѕРіРёРЅ *',
+                          prefixIcon: Icon(Icons.account_circle),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (v) => (v == null || v.trim().length < 3) ? 'РњРёРЅРёРјСѓРј 3 СЃРёРјРІРѕР»Р°' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _fullNameController,
+                        decoration: const InputDecoration(
+                          labelText: 'Р¤РРћ РїРѕР»РЅРѕСЃС‚СЊСЋ *',
+                          prefixIcon: Icon(Icons.badge),
+                          border: OutlineInputBorder(),
+                        ),
+                        validator: (v) => (v == null || v.trim().length < 3) ? 'РЈРєР°Р¶РёС‚Рµ С„Р°РјРёР»РёСЋ Рё РёРјСЏ' : null,
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: const InputDecoration(
+                          labelText: 'РџР°СЂРѕР»СЊ *',
+                          prefixIcon: Icon(Icons.lock),
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text('РўСЂРµР±РѕРІР°РЅРёСЏ Рє РїР°СЂРѕР»СЋ:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                            const SizedBox(height: 6),
+                            _buildRuleItem('Р”Р»РёРЅР° РЅРµ РјРµРЅРµРµ 8 СЃРёРјРІРѕР»РѕРІ', _hasMinLength),
+                            _buildRuleItem('РҐРѕС‚СЏ Р±С‹ РѕРґРЅР° С†РёС„СЂР° (0-9)', _hasDigit),
+                            _buildRuleItem('РҐРѕС‚СЏ Р±С‹ РѕРґРёРЅ СЃРїРµС†СЃРёРјРІРѕР» (!@#\$%^&*)', _hasSpecialChar),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: _loading ? null : _submit,
+                        style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                        child: _loading
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text('РЎРѕР·РґР°С‚СЊ Р°РєРєР°СѓРЅС‚'),
+                      ),
+                      const SizedBox(height: 16),
+                      TextButton(
+                        onPressed: () => context.go('/login'),
+                        child: const Text('РЈР¶Рµ РµСЃС‚СЊ Р°РєРєР°СѓРЅС‚? Р’РѕР№С‚Рё'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+import 'package:flutter/foundation.dart';
+import '../models/author.dart';
+import '../models/author_query.dart';
+import '../models/page_result.dart';
+import '../repositories/author_repository.dart';
+import 'load_status.dart';
+
+class AuthorListNotifier extends ChangeNotifier {
+  final AuthorRepository _repository;
+  AuthorListNotifier(this._repository);
+
+  AuthorQuery _query = const AuthorQuery();
+  PageResult<Author> _result = PageResult.empty();
+  LoadStatus _status = LoadStatus.idle;
+  String? _error;
+  final Set<int> _selected = {};
+
+  AuthorQuery get query => _query;
+  PageResult<Author> get result => _result;
+  LoadStatus get status => _status;
+  String? get error => _error;
+  Set<int> get selected => Set.unmodifiable(_selected);
+  bool get hasSelection => _selected.isNotEmpty;
+
+  Future<void> load() async {
+    _status = LoadStatus.loading;
+    _error = null;
+    notifyListeners();
+    try {
+      _result = await _repository.find(_query);
+      _status = LoadStatus.success;
+    } catch (e) {
+      _error = 'РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ СЃРїРёСЃРѕРє Р°РІС‚РѕСЂРѕРІ: $e';
+      _status = LoadStatus.error;
+    }
+    notifyListeners();
+  }
+
+  Future<void> applyQuery(AuthorQuery next) async {
+    _query = next;
+    _selected.clear();
+    await load();
+  }
+
+  void toggleSelection(int id) {
+    if (_selected.contains(id)) {
+      _selected.remove(id);
+    } else {
+      _selected.add(id);
+    }
+    notifyListeners();
+  }
+
+  Future<void> softDelete(int id) async {
+    await _repository.softDelete(id);
+    await load();
+  }
+
+  Future<void> hardDelete(int id) async {
+    await _repository.hardDelete(id);
+    await load();
+  }
+
+  Future<void> restore(int id) async {
+    await _repository.restore(id);
+    await load();
+  }
+
+  Future<void> deleteSelected() async {
+    await _repository.deleteMany(_selected.toList());
+    _selected.clear();
+    await load();
+  }
+}
+import 'dart:convert';
+import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../models/app_user.dart';
+import '../models/role.dart';
+
+class AuthNotifier extends ChangeNotifier {
+  static const _kAccess = 'auth_access_token';
+  static const _kRefresh = 'auth_refresh_token';
+  static const _kUser = 'auth_cached_user';
+  static const _kLoginTime = 'auth_login_timestamp';
+
+  final SharedPreferences _prefs;
+  final Dio _dio;
+
+  AppUser? _user;
+  String? _accessToken;
+  bool _isRefreshing = false;
+
+  AuthNotifier(this._prefs, this._dio);
+
+  AppUser? get user => _user;
+  String? get accessToken => _accessToken;
+  bool get isAuthenticated => _user != null;
+
+  bool has(Role role) => _user != null && _user!.role.level >= role.level;
+
+  Map<String, dynamic> _safeMap(dynamic data) {
+    if (data is Map<String, dynamic>) return data;
+    if (data is Map) return Map<String, dynamic>.from(data);
+    if (data is String) {
+      try {
+        final decoded = jsonDecode(data);
+        if (decoded is Map) return Map<String, dynamic>.from(decoded);
+      } catch (_) {}
+    }
+    return {};
+  }
+
+  Future<void> restore() async {
+    final access = _prefs.getString(_kAccess);
+    final refresh = _prefs.getString(_kRefresh);
+    final userRaw = _prefs.getString(_kUser);
+    final loginTime = _prefs.getInt(_kLoginTime);
+
+    if (loginTime != null) {
+      final sessionAge = DateTime.now().millisecondsSinceEpoch - loginTime;
+      if (sessionAge > 12 * 3600 * 1000) {
+        await logout();
+        return;
+      }
+    }
+
+    if (access == null) return;
+    _accessToken = access;
+
+    if (userRaw != null) {
+      try {
+        _user = AppUser.fromJson(jsonDecode(userRaw) as Map<String, dynamic>);
+      } catch (_) {}
+    }
+
+    try {
+      final res = await _dio.get(
+        '/auth/me',
+        options: Options(headers: {'Authorization': 'Bearer $access'}),
+      );
+      final data = _safeMap(res.data);
+      _user = AppUser.fromJson(data);
+      await _prefs.setString(_kUser, jsonEncode(_user!.toJson()));
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401 && refresh != null) {
+        try {
+          await refreshTokens();
+        } catch (_) {
+          await logout();
+        }
+      } else if (e.response?.statusCode == 401) {
+        await logout();
+      }
+    }
+    notifyListeners();
+  }
+
+  Future<void> login(String username, String password) async {
+    final res = await _dio.post('/auth/login', data: {
+      'username': username,
+      'password': password,
+    });
+
+    final data = _safeMap(res.data);
+    _accessToken = data['accessToken'] as String;
+    final refreshToken = data['refreshToken'] as String;
+    _user = AppUser.fromJson(_safeMap(data['user']));
+
+    await _prefs.setString(_kAccess, _accessToken!);
+    await _prefs.setString(_kRefresh, refreshToken);
+    await _prefs.setString(_kUser, jsonEncode(_user!.toJson()));
+    await _prefs.setInt(_kLoginTime, DateTime.now().millisecondsSinceEpoch);
+
+    notifyListeners();
+  }
+
+  Future<void> register(String username, String password, String fullName) async {
+    final res = await _dio.post('/auth/register', data: {
+      'username': username,
+      'password': password,
+      'fullName': fullName,
+    });
+
+    final data = _safeMap(res.data);
+    _accessToken = data['accessToken'] as String;
+    final refreshToken = data['refreshToken'] as String;
+    _user = AppUser.fromJson(_safeMap(data['user']));
+
+    await _prefs.setString(_kAccess, _accessToken!);
+    await _prefs.setString(_kRefresh, refreshToken);
+    await _prefs.setString(_kUser, jsonEncode(_user!.toJson()));
+    await _prefs.setInt(_kLoginTime, DateTime.now().millisecondsSinceEpoch);
+
+    notifyListeners();
+  }
+
+  Future<void> refreshTokens() async {
+    if (_isRefreshing) return;
+    _isRefreshing = true;
+
+    final refresh = _prefs.getString(_kRefresh);
+    if (refresh == null) {
+      _isRefreshing = false;
+      await logout();
+      throw Exception('No refresh token');
+    }
+
+    try {
+      final res = await _dio.post('/auth/refresh', data: {
+        'refreshToken': refresh,
+      });
+
+      final data = _safeMap(res.data);
+      _accessToken = data['accessToken'] as String;
+      final newRefresh = data['refreshToken'] as String?;
+
+      await _prefs.setString(_kAccess, _accessToken!);
+      if (newRefresh != null) {
+        await _prefs.setString(_kRefresh, newRefresh);
+      }
+      notifyListeners();
+    } finally {
+      _isRefreshing = false;
+    }
+  }
+
+  Future<void> logout() async {
+    _user = null;
+    _accessToken = null;
+    await _prefs.remove(_kAccess);
+    await _prefs.remove(_kRefresh);
+    await _prefs.remove(_kUser);
+    await _prefs.remove(_kLoginTime);
+    notifyListeners();
+  }
+}
+import 'package:flutter/foundation.dart';
+import '../core/api_exceptions.dart';
+import '../models/book.dart';
+import '../models/book_query.dart';
+import '../repositories/book_repository.dart';
+
+class BookListNotifier extends ChangeNotifier {
+  final BookRepository _repository;
+
+  List<Book> _items = [];
+  int _total = 0;
+  bool _isLoading = false;
+  String? _errorMessage;
+  BookQuery _query = const BookQuery();
+
+  BookListNotifier(this._repository);
+
+  List<Book> get items => _items;
+  int get total => _total;
+  bool get isLoading => _isLoading;
+  String? get errorMessage => _errorMessage;
+  BookQuery get query => _query;
+
+  Future<void> load({BookQuery? newQuery}) async {
+    if (newQuery != null) {
+      _query = newQuery;
+    }
+    _isLoading = true;
+    _errorMessage = null;
+    notifyListeners();
+
+    try {
+      final result = await _repository.find(_query);
+      _items = result.items;
+      _total = result.total;
+      _errorMessage = null;
+    } on ApiException catch (e) {
+      _errorMessage = e.message;
+    } catch (e) {
+      _errorMessage = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> reload() => load();
+
+  void updateQuery(BookQuery Function(BookQuery current) update) {
+    final updated = update(_query);
+    load(newQuery: updated);
+  }
+}
+enum LoadStatus { idle, loading, success, error }
+class AppValidators {
+  static String? requiredField(String? value, [String message = 'РџРѕР»Рµ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РґР»СЏ Р·Р°РїРѕР»РЅРµРЅРёСЏ']) {
+    if (value == null || value.trim().isEmpty) {
+      return message;
+    }
+    return null;
+  }
+
+  static String? minLength(String? value, int min, [String? message]) {
+    if (value == null || value.trim().length < min) {
+      return message ?? 'РњРёРЅРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР° - $min СЃРёРјРІРѕР»РѕРІ';
+    }
+    return null;
+  }
+
+  static String? maxLength(String? value, int max, [String? message]) {
+    if (value != null && value.trim().length > max) {
+      return message ?? 'РњР°РєСЃРёРјР°Р»СЊРЅР°СЏ РґР»РёРЅР° - $max СЃРёРјРІРѕР»РѕРІ';
+    }
+    return null;
+  }
+
+  static String? intRange(String? value, int min, int max, [String? message]) {
+    if (value == null || value.trim().isEmpty) return 'Р’РІРµРґРёС‚Рµ С‡РёСЃР»Рѕ';
+    final n = int.tryParse(value.trim());
+    if (n == null) return 'Р’РІРµРґРёС‚Рµ С†РµР»РѕРµ С‡РёСЃР»Рѕ';
+    if (n < min || n > max) {
+      return message ?? 'Р—РЅР°С‡РµРЅРёРµ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ РѕС‚ $min РґРѕ $max';
+    }
+    return null;
+  }
+
+  static String? positiveInt(String? value, [String? message]) {
+    if (value == null || value.trim().isEmpty) return 'Р’РІРµРґРёС‚Рµ С‡РёСЃР»Рѕ';
+    final n = int.tryParse(value.trim());
+    if (n == null || n <= 0) {
+      return message ?? 'Р§РёСЃР»Рѕ РґРѕР»Р¶РЅРѕ Р±С‹С‚СЊ Р±РѕР»СЊС€Рµ 0';
+    }
+    return null;
+  }
+
+  static String? email(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Р’РІРµРґРёС‚Рµ email';
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    if (!emailRegex.hasMatch(value.trim())) {
+      return 'РќРµРєРѕСЂСЂРµРєС‚РЅС‹Р№ С„РѕСЂРјР°С‚ email (РїСЂРёРјРµСЂ: user@mail.ru)';
+    }
+    return null;
+  }
+
+  static String? isbn(String? value) {
+    if (value == null || value.trim().isEmpty) return 'Р’РІРµРґРёС‚Рµ ISBN';
+    final clean = value.replaceAll('-', '').trim();
+    if (clean.length != 10 && clean.length != 13) {
+      return 'ISBN РґРѕР»Р¶РµРЅ СЃРѕРґРµСЂР¶Р°С‚СЊ 10 РёР»Рё 13 С†РёС„СЂ';
+    }
+    return null;
+  }
+}
+import 'package:flutter/material.dart';
+
+class AdaptiveScaffold extends StatelessWidget {
+  final String title;
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+  final List<NavigationDestinationData> destinations;
+  final Widget body;
+  final Widget? floatingActionButton;
+  final List<Widget>? actions;
+
+  const AdaptiveScaffold({
+    super.key,
+    required this.title,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+    required this.destinations,
+    required this.body,
+    this.floatingActionButton,
+    this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+
+        if (width < 600) {
+          return Scaffold(
+            appBar: AppBar(
+              title: Text(title, overflow: TextOverflow.ellipsis),
+              actions: actions,
+            ),
+            body: SafeArea(child: body),
+            floatingActionButton: floatingActionButton,
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: selectedIndex,
+              onDestinationSelected: onDestinationSelected,
+              destinations: destinations
+                  .map((d) => NavigationDestination(
+                        icon: Icon(d.icon),
+                        selectedIcon: Icon(d.selectedIcon ?? d.icon),
+                        label: d.label,
+                      ))
+                  .toList(),
+            ),
+          );
+        }
+
+        final isCompactRail = width < 1100;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(title, overflow: TextOverflow.ellipsis),
+            actions: actions,
+          ),
+          floatingActionButton: floatingActionButton,
+          body: Row(
+            children: [
+              NavigationRail(
+                selectedIndex: selectedIndex,
+                onDestinationSelected: onDestinationSelected,
+                extended: !isCompactRail,
+                minExtendedWidth: 200,
+                destinations: destinations
+                    .map((d) => NavigationRailDestination(
+                          icon: Icon(d.icon),
+                          selectedIcon: Icon(d.selectedIcon ?? d.icon),
+                          label: Text(d.label),
+                        ))
+                    .toList(),
+              ),
+              const VerticalDivider(thickness: 1, width: 1),
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 1200),
+                    child: SafeArea(child: body),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class NavigationDestinationData {
+  final IconData icon;
+  final IconData? selectedIcon;
+  final String label;
+
+  const NavigationDestinationData({
+    required this.icon,
+    this.selectedIcon,
+    required this.label,
+  });
+}
+import 'package:flutter/material.dart';
+
+class TableColumnSpec<T> {
+  final String label;
+  final String? sortField;
+  final bool numeric;
+  final Widget Function(T item) build;
+
+  const TableColumnSpec({
+    required this.label,
+    required this.build,
+    this.sortField,
+    this.numeric = false,
+  });
+}
+
+class EntityTable<T> extends StatelessWidget {
+  final List<TableColumnSpec<T>> columns;
+  final List<T> items;
+  final int Function(T item) idOf;
+  final Set<int> selected;
+  final ValueChanged<int>? onToggleSelect;
+  final String? sortField;
+  final bool sortAscending;
+  final void Function(String field)? onSort;
+  final List<Widget> Function(T item)? actions;
+
+  const EntityTable({
+    super.key,
+    required this.columns,
+    required this.items,
+    required this.idOf,
+    this.selected = const {},
+    this.onToggleSelect,
+    this.sortField,
+    this.sortAscending = true,
+    this.onSort,
+    this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(minWidth: constraints.maxWidth),
+              child: DataTable(
+                showCheckboxColumn: onToggleSelect != null,
+                headingRowColor: WidgetStateProperty.all(
+                  theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                ),
+                sortColumnIndex: _calculateSortColumnIndex(),
+                sortAscending: sortAscending,
+                columns: [
+                  ...columns.map((c) {
+                    return DataColumn(
+                      label: Text(c.label, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      numeric: c.numeric,
+                      onSort: c.sortField != null && onSort != null
+                          ? (_, __) => onSort!(c.sortField!)
+                          : null,
+                    );
+                  }),
+                  if (actions != null)
+                    const DataColumn(
+                      label: Text('Р”РµР№СЃС‚РІРёСЏ', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
+                ],
+                rows: items.map((item) {
+                  final id = idOf(item);
+                  final isSelected = selected.contains(id);
+
+                  return DataRow(
+                    selected: isSelected,
+                    onSelectChanged: onToggleSelect != null ? (_) => onToggleSelect!(id) : null,
+                    cells: [
+                      ...columns.map((c) => DataCell(c.build(item))),
+                      if (actions != null)
+                        DataCell(Row(mainAxisSize: MainAxisSize.min, children: actions!(item))),
+                    ],
+                  );
+                }).toList(),
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  int? _calculateSortColumnIndex() {
+    if (sortField == null) return null;
+    final index = columns.indexWhere((c) => c.sortField == sortField);
+    return index != -1 ? index : null;
+  }
+}
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../router.dart';
+import '../state/auth_notifier.dart';
+
+class InactivityWatcher extends StatefulWidget {
+  final Widget child;
+  final Duration timeout;
+  final Duration warningBefore;
+
+  const InactivityWatcher({
+    super.key,
+    required this.child,
+    this.timeout = const Duration(minutes: 3),
+    this.warningBefore = const Duration(seconds: 30),
+  });
+
+  @override
+  State<InactivityWatcher> createState() => _InactivityWatcherState();
+}
+
+class _InactivityWatcherState extends State<InactivityWatcher> {
+  Timer? _warningTimer;
+  Timer? _logoutTimer;
+  bool _dialogOpen = false;
+
+  @override
+  void initState() {
+    super.initState();
+    HardwareKeyboard.instance.addHandler(_onKey);
+    _resetTimers();
+  }
+
+  @override
+  void didUpdateWidget(InactivityWatcher oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _resetTimers();
+  }
+
+  bool _onKey(KeyEvent event) {
+    _onUserActivity();
+    return false;
+  }
+
+  void _onUserActivity() {
+    final auth = context.read<AuthNotifier>();
+    if (!auth.isAuthenticated) return;
+    if (_dialogOpen) return;
+    _resetTimers();
+  }
+
+  void _resetTimers() {
+    _warningTimer?.cancel();
+    _logoutTimer?.cancel();
+
+    final diff = widget.timeout - widget.warningBefore;
+    final warningDelay = diff.isNegative ? Duration.zero : diff;
+
+    _warningTimer = Timer(warningDelay, _showWarningDialog);
+    _logoutTimer = Timer(widget.timeout, _performLogout);
+  }
+
+  void _showWarningDialog() {
+    final auth = context.read<AuthNotifier>();
+    if (!auth.isAuthenticated || !mounted || _dialogOpen) return;
+
+    final navContext = rootNavigatorKey.currentContext;
+    if (navContext == null) return;
+
+    setState(() => _dialogOpen = true);
+
+    showDialog(
+      context: navContext,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.timer_outlined, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('РўР°Р№РјР°СѓС‚ СЃРµСЃСЃРёРё'),
+          ],
+        ),
+        content: const Text(
+          'Р’С‹ РЅРµ РїСЂРѕСЏРІР»СЏР»Рё Р°РєС‚РёРІРЅРѕСЃС‚Рё. РЎРµСЃСЃРёСЏ Р±СѓРґРµС‚ Р·Р°РІРµСЂС€РµРЅР° С‡РµСЂРµР· 30 СЃРµРєСѓРЅРґ РІ С†РµР»СЏС… Р±РµР·РѕРїР°СЃРЅРѕСЃС‚Рё.',
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              setState(() => _dialogOpen = false);
+              _resetTimers();
+            },
+            child: const Text('РћСЃС‚Р°С‚СЊСЃСЏ РІ СЃРёСЃС‚РµРјРµ'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _performLogout() async {
+    if (!mounted) return;
+    if (_dialogOpen) {
+      final navContext = rootNavigatorKey.currentContext;
+      if (navContext != null) {
+        Navigator.of(navContext, rootNavigator: true).pop();
+      }
+      setState(() => _dialogOpen = false);
+    }
+    await context.read<AuthNotifier>().logout();
+  }
+
+  @override
+  void dispose() {
+    HardwareKeyboard.instance.removeHandler(_onKey);
+    _warningTimer?.cancel();
+    _logoutTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: (_) => _onUserActivity(),
+      child: widget.child,
+    );
+  }
+}
+import 'package:flutter/material.dart';
+
+class PaginationBar extends StatelessWidget {
+  final int page;
+  final int totalPages;
+  final int totalItems;
+  final int size;
+  final ValueChanged<int> onPageChange;
+  final ValueChanged<int> onSizeChange;
+
+  const PaginationBar({
+    super.key,
+    required this.page,
+    required this.totalPages,
+    required this.totalItems,
+    required this.size,
+    required this.onPageChange,
+    required this.onSizeChange,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 16,
+          runSpacing: 8,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('РЎС‚СЂРѕРє: '),
+                DropdownButton<int>(
+                  value: size,
+                  isDense: true,
+                  underline: const SizedBox(),
+                  items: const [
+                    DropdownMenuItem(value: 10, child: Text('10')),
+                    DropdownMenuItem(value: 25, child: Text('25')),
+                    DropdownMenuItem(value: 50, child: Text('50')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) onSizeChange(val);
+                  },
+                ),
+                const SizedBox(width: 16),
+                Text('Р’СЃРµРіРѕ: $totalItems'),
+              ],
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.first_page),
+                  tooltip: 'РџРµСЂРІР°СЏ',
+                  onPressed: page > 1 ? () => onPageChange(1) : null,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_left),
+                  tooltip: 'РџСЂРµРґС‹РґСѓС‰Р°СЏ',
+                  onPressed: page > 1 ? () => onPageChange(page - 1) : null,
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Text('РЎС‚СЂ. $page РёР· $totalPages'),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.chevron_right),
+                  tooltip: 'РЎР»РµРґСѓСЋС‰Р°СЏ',
+                  onPressed: page < totalPages ? () => onPageChange(page + 1) : null,
+                ),
+                IconButton(
+                  icon: const Icon(Icons.last_page),
+                  tooltip: 'РџРѕСЃР»РµРґРЅСЏСЏ',
+                  onPressed: page < totalPages ? () => onPageChange(totalPages) : null,
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+import 'package:flutter/material.dart';
+
+class ResponsiveView extends StatelessWidget {
+  final Widget mobileCards;
+  final Widget desktopTable;
+  final double breakpoint;
+
+  const ResponsiveView({
+    super.key,
+    required this.mobileCards,
+    required this.desktopTable,
+    this.breakpoint = 768.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < breakpoint) {
+          return mobileCards;
+        }
+        return SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: desktopTable,
+          ),
+        );
+      },
+    );
+  }
+}
+import 'dart:async';
+import 'package:flutter/material.dart';
+
+class SearchInput extends StatefulWidget {
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+  final String hintText;
+
+  const SearchInput({
+    super.key,
+    required this.initialValue,
+    required this.onChanged,
+    this.hintText = 'РџРѕРёСЃРє...',
+  });
+
+  @override
+  State<SearchInput> createState() => _SearchInputState();
+}
+
+class _SearchInputState extends State<SearchInput> {
+  late final TextEditingController _controller;
+  Timer? _debounceTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void didUpdateWidget(covariant SearchInput oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialValue != widget.initialValue && widget.initialValue != _controller.text) {
+      _controller.text = widget.initialValue;
+    }
+  }
+
+  @override
+  void dispose() {
+    _debounceTimer?.cancel();
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onTextChanged(String value) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      widget.onChanged(value);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return TextField(
+      controller: _controller,
+      decoration: InputDecoration(
+        hintText: widget.hintText,
+        prefixIcon: const Icon(Icons.search),
+        suffixIcon: _controller.text.isNotEmpty
+            ? IconButton(
+                icon: const Icon(Icons.clear),
+                onPressed: () {
+                  _controller.clear();
+                  widget.onChanged('');
+                },
+              )
+            : null,
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+      ),
+      onChanged: _onTextChanged,
+    );
+  }
+}
+import 'package:dio/dio.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:library_web/core/api_client.dart';
+import 'package:library_web/core/api_exceptions.dart';
+import 'package:library_web/models/book_query.dart';
+import 'package:library_web/repositories/api_book_repository.dart';
+
+void main() {
+  group('ApiBookRepository Unit Tests', () {
+    test('1. РЈСЃРїРµС€РЅС‹Р№ СЂР°Р·Р±РѕСЂ СЃРїРёСЃРєР° РєРЅРёРі РёР· JSON (GET 200)', () async {
+      final dio = buildDio();
+      dio.httpClientAdapter = _MockHttpAdapter((options) async {
+        return ResponseBody.fromString(
+          '{"items": [{"id": 1, "title": "1984", "isbn": "123", "year": 1949, "pages": 320, "publisherId": 1, "authorIds": [], "genreIds": [], "copiesTotal": 5, "copiesAvailable": 5}], "page": 1, "size": 10, "total": 1}',
+          200,
+          headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
+        );
+      });
+
+      final repo = ApiBookRepository(dio);
+      final result = await repo.find(const BookQuery());
+
+      expect(result.items.length, 1);
+      expect(result.items.first.title, '1984');
+    });
+
+    test('2. РћС€РёР±РєР° РІР°Р»РёРґР°С†РёРё 422 РІС‹Р±СЂР°СЃС‹РІР°РµС‚ ValidationException СЃ РѕС€РёР±РєР°РјРё РїРѕР»РµР№', () async {
+      final dio = buildDio();
+      dio.httpClientAdapter = _MockHttpAdapter((options) async {
+        return ResponseBody.fromString(
+          '{"message": "РћС€РёР±РєР° РІР°Р»РёРґР°С†РёРё", "errors": {"isbn": "РљРЅРёРіР° СЃ С‚Р°РєРёРј ISBN СѓР¶Рµ СЃСѓС‰РµСЃС‚РІСѓРµС‚"}}',
+          422,
+          headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
+        );
+      });
+
+      final repo = ApiBookRepository(dio);
+
+      expect(
+        () => repo.find(const BookQuery()),
+        throwsA(isA<ValidationException>().having(
+          (e) => e.errors['isbn'],
+          'isbn error',
+          contains('ISBN'),
+        )),
+      );
+    });
+
+    test('3. РћС€РёР±РєР° РєРѕРЅС„Р»РёРєС‚Р° 409 РІС‹Р±СЂР°СЃС‹РІР°РµС‚ ConflictException', () async {
+      final dio = buildDio();
+      dio.httpClientAdapter = _MockHttpAdapter((options) async {
+        return ResponseBody.fromString(
+          '{"message": "РљРѕРЅС„Р»РёРєС‚: РЅРµС‚ СЃРІРѕР±РѕРґРЅС‹С… СЌРєР·РµРјРїР»СЏСЂРѕРІ"}',
+          409,
+          headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
+        );
+      });
+
+      final repo = ApiBookRepository(dio);
+      expect(() => repo.find(const BookQuery()), throwsA(isA<ConflictException>()));
+    });
+
+    test('4. РќРµРґРѕСЃС‚СѓРїРЅРѕСЃС‚СЊ СЃРµСЂРІРµСЂР° РёР»Рё СЃР±РѕР№ СЃРµС‚Рё РІС‹Р±СЂР°СЃС‹РІР°РµС‚ NetworkException', () async {
+      final dio = buildDio();
+      dio.httpClientAdapter = _MockHttpAdapter((options) async {
+        throw DioException(
+          requestOptions: options,
+          type: DioExceptionType.connectionError,
+        );
+      });
+
+      final repo = ApiBookRepository(dio);
+      expect(() => repo.find(const BookQuery()), throwsA(isA<NetworkException>()));
+    });
+
+    test('5. РћС€РёР±РєР° 404 РІС‹Р±СЂР°СЃС‹РІР°РµС‚ NotFoundException', () async {
+      final dio = buildDio();
+      dio.httpClientAdapter = _MockHttpAdapter((options) async {
+        return ResponseBody.fromString(
+          '{"message": "РљРЅРёРіР° РЅРµ РЅР°Р№РґРµРЅР°"}',
+          404,
+          headers: {Headers.contentTypeHeader: [Headers.jsonContentType]},
+        );
+      });
+
+      final repo = ApiBookRepository(dio);
+      expect(() => repo.find(const BookQuery()), throwsA(isA<NotFoundException>()));
+    });
+  });
+}
+
+class _MockHttpAdapter implements HttpClientAdapter {
+  final Future<ResponseBody> Function(RequestOptions options) handler;
+  _MockHttpAdapter(this.handler);
+
+  @override
+  Future<ResponseBody> fetch(
+    RequestOptions options,
+    Stream<dynamic>? requestStream,
+    Future<void>? cancelFuture,
+  ) =>
+      handler(options);
+
+  @override
+  void close({bool force = false}) {}
+}
+import 'package:flutter_test/flutter_test.dart';
+import 'package:library_web/models/app_user.dart';
+import 'package:library_web/models/role.dart';
+
+void main() {
+  group('РўРµСЃС‚РёСЂРѕРІР°РЅРёРµ РјР°С‚СЂРёС†С‹ СЂРѕР»РµР№ Рё РїСЂР°РІ (РџР 5)', () {
+    test('1. РРµСЂР°СЂС…РёСЏ СѓСЂРѕРІРЅРµР№ РґРѕСЃС‚СѓРїР° СЂРѕР»РµР№', () {
+      expect(Role.admin.level > Role.librarian.level, isTrue);
+      expect(Role.librarian.level > Role.reader.level, isTrue);
+      expect(Role.admin.level, 3);
+    });
+
+    test('2. РђРґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂ РѕР±Р»Р°РґР°РµС‚ РІСЃРµРјРё РїСЂР°РІР°РјРё РЅРёР¶РµСЃС‚РѕСЏС‰РёС… СЂРѕР»РµР№', () {
+      const admin = AppUser(id: 1, username: 'admin', fullName: 'РђРґРјРёРЅ', role: Role.admin);
+      expect(admin.role.level >= Role.admin.level, isTrue);
+      expect(admin.role.level >= Role.librarian.level, isTrue);
+      expect(admin.role.level >= Role.reader.level, isTrue);
+    });
+
+    test('3. Р‘РёР±Р»РёРѕС‚РµРєР°СЂСЊ РЅРµ РёРјРµРµС‚ РїСЂР°РІ Р°РґРјРёРЅРёСЃС‚СЂР°С‚РѕСЂР°', () {
+      const lib = AppUser(id: 2, username: 'lib', fullName: 'Р‘РёР±Р»РёРѕС‚РµРєР°СЂСЊ', role: Role.librarian);
+      expect(lib.role.level >= Role.librarian.level, isTrue);
+      expect(lib.role.level >= Role.admin.level, isFalse);
+    });
+
+    test('4. Р§РёС‚Р°С‚РµР»СЊ РЅРµ РёРјРµРµС‚ РґРѕСЃС‚СѓРїР° Рє СЂРµРґР°РєС‚РёСЂРѕРІР°РЅРёСЋ С„РѕРЅРґР°', () {
+      const reader = AppUser(id: 3, username: 'reader', fullName: 'Р§РёС‚Р°С‚РµР»СЊ', role: Role.reader);
+      expect(reader.role.level >= Role.reader.level, isTrue);
+      expect(reader.role.level >= Role.librarian.level, isFalse);
+      expect(reader.role.level >= Role.admin.level, isFalse);
+    });
+
+    test('5. Р Р°Р·Р±РѕСЂ СЂРѕР»РµР№ РёР· СЃРµСЂРІРµСЂРЅРѕРіРѕ JSON', () {
+      final user = AppUser.fromJson({'id': 10, 'username': 'boss', 'role': 'admin'});
+      expect(user.role, Role.admin);
+      final fallback = AppUser.fromJson({'id': 11, 'username': 'unknown', 'role': 'something'});
+      expect(fallback.role, Role.reader);
+    });
+  });
+}
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
+import 'package:go_router/go_router.dart';
+import 'package:dio/dio.dart';
+import 'package:library_web/models/book.dart';
+import 'package:library_web/models/book_query.dart';
+import 'package:library_web/models/page_result.dart';
+import 'package:library_web/repositories/book_repository.dart';
+import 'package:library_web/repositories/cached_dictionary_repository.dart';
+import 'package:library_web/screens/book_form_screen.dart';
+import 'package:library_web/screens/book_list_screen.dart';
+import 'package:library_web/screens/dashboard_screen.dart';
+import 'package:library_web/state/auth_notifier.dart';
+import 'package:library_web/state/book_list_notifier.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+class FakeBookRepository implements BookRepository {
+  final List<Book> items;
+  final bool shouldFail;
+  final Duration delay;
+
+  FakeBookRepository({
+    this.items = const [],
+    this.shouldFail = false,
+    this.delay = Duration.zero,
+  });
+
+  @override
+  Future<PageResult<Book>> find(BookQuery query) async {
+    if (delay > Duration.zero) await Future.delayed(delay);
+    if (shouldFail) throw Exception('Network error');
+    return PageResult(
+      items: items,
+      total: items.length,
+      page: query.page,
+      size: query.size,
+    );
+  }
+
+  @override
+  Future<Book?> findById(int id) async => items.firstWhere((b) => b.id == id, orElse: () => items.first);
+
+  @override
+  Future<Book> create(Book book) async => book;
+
+  @override
+  Future<Book> update(Book book) async => book;
+
+  @override
+  Future<void> softDelete(int id) async {}
+
+  @override
+  Future<void> hardDelete(int id) async {}
+
+  @override
+  Future<void> restore(int id) async {}
+
+  @override
+  Future<int> deleteMany(List<int> ids) async => 0;
+}
+
+Widget wrapWithProviders(Widget child, {BookRepository? repo, AuthNotifier? auth}) {
+  final dio = Dio();
+  final bookRepo = repo ?? FakeBookRepository();
+  final authNotifier = auth ?? AuthNotifier(FakeSharedPreferences() as dynamic, dio);
+
+  return MultiProvider(
+    providers: [
+      ChangeNotifierProvider<AuthNotifier>.value(value: authNotifier),
+      Provider<Dio>.value(value: dio),
+      Provider<CachedDictionaryRepository>(
+        create: (_) => CachedDictionaryRepository(dio),
+      ),
+      Provider<BookRepository>.value(value: bookRepo),
+      ChangeNotifierProvider<BookListNotifier>(
+        create: (_) => BookListNotifier(bookRepo),
+      ),
+    ],
+    child: MaterialApp.router(
+      routerConfig: GoRouter(
+        routes: [
+          GoRoute(path: '/', builder: (_, __) => child),
+        ],
+      ),
+    ),
+  );
+}
+
+class FakeSharedPreferences implements SharedPreferences {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => null;
+}
+
+void main() {
+  group('Widget Tests (Full Suite)', () {
+    testWidgets('1. Loading indicator is displayed during fetch', (tester) async {
+      final fakeRepo = FakeBookRepository(
+        items: [],
+        delay: const Duration(milliseconds: 500),
+      );
+
+      await tester.pumpWidget(wrapWithProviders(const BookListScreen(), repo: fakeRepo));
+      await tester.pump();
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.text('Р—Р°РіСЂСѓР·РєР° РґР°РЅРЅС‹С… СЃ СЃРµСЂРІРµСЂР°...'), findsOneWidget);
+    });
+
+    testWidgets('2. Empty state message is displayed when list has no items', (tester) async {
+      final fakeRepo = FakeBookRepository(items: []);
+
+      await tester.pumpWidget(wrapWithProviders(const BookListScreen(), repo: fakeRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('РџРѕ Р·Р°РґР°РЅРЅС‹Рј РєСЂРёС‚РµСЂРёСЏРј РєРЅРёРі РЅРµ РЅР°Р№РґРµРЅРѕ'), findsOneWidget);
+      expect(find.byIcon(Icons.search_off), findsOneWidget);
+    });
+
+    testWidgets('3. Error state displays reload button and triggers retry', (tester) async {
+      final fakeRepo = FakeBookRepository(shouldFail: true);
+
+      await tester.pumpWidget(wrapWithProviders(const BookListScreen(), repo: fakeRepo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('РџРѕРІС‚РѕСЂРёС‚СЊ'), findsOneWidget);
+      expect(find.byIcon(Icons.cloud_off), findsOneWidget);
+
+      await tester.tap(find.text('РџРѕРІС‚РѕСЂРёС‚СЊ'));
+      await tester.pump();
+    });
+
+    testWidgets('4. Form validation displays required field error', (tester) async {
+      await tester.pumpWidget(wrapWithProviders(const BookFormScreen()));
+      await tester.pumpAndSettle();
+
+      final saveBtn = find.text('РЎРѕР·РґР°С‚СЊ РєРЅРёРіСѓ');
+      await tester.ensureVisible(saveBtn);
+      await tester.tap(saveBtn);
+      await tester.pump();
+
+      expect(find.text('РџРѕР»Рµ РѕР±СЏР·Р°С‚РµР»СЊРЅРѕ РґР»СЏ Р·Р°РїРѕР»РЅРµРЅРёСЏ'), findsOneWidget);
+    });
+
+    testWidgets('5. Unauthorized actions are hidden for reader role', (tester) async {
+      SharedPreferences.setMockInitialValues({
+        'auth_access_token': 'dummy_token',
+        'auth_cached_user': '{"id":3,"username":"reader","fullName":"Reader User","role":"reader"}',
+      });
+      final prefs = await SharedPreferences.getInstance();
+      final auth = AuthNotifier(prefs, Dio());
+      await auth.restore();
+
+      await tester.pumpWidget(wrapWithProviders(const DashboardScreen(), auth: auth));
+      await tester.pumpAndSettle();
+
+      expect(find.text('РњРѕРё РІС‹РґР°С‡Рё'), findsOneWidget);
+      expect(find.text('РџРѕР»СЊР·РѕРІР°С‚РµР»Рё Рё СЂРѕР»Рё'), findsNothing);
+      expect(find.text('РќРѕРІР°СЏ РєРЅРёРіР°'), findsNothing);
+    });
+  });
+}
+<!DOCTYPE html>
+<html>
+<head>
+  <base href="$FLUTTER_BASE_HREF">
+  <meta charset="UTF-8">
+  <meta content="IE=Edge" http-equiv="X-UA-Compatible">
+  <meta name="description" content="Р‘РёР±Р»РёРѕС‚РµС‡РЅР°СЏ СЃРёСЃС‚РµРјР°">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Р‘РёР±Р»РёРѕС‚РµС‡РЅР°СЏ СЃРёСЃС‚РµРјР°</title>
+  <link rel="icon" type="image/png" href="favicon.png"/>
+  <link rel="manifest" href="manifest.json">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f0fdfa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      overflow: hidden;
+    }
+    .loader-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+    .spinner {
+      width: 48px;
+      height: 48px;
+      border: 4px solid #ccfbf1;
+      border-top: 4px solid #0d9488;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .loading-text {
+      color: #134e4a;
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="loader-box">
+    <div class="spinner"></div>
+    <div class="loading-text">Р—Р°РіСЂСѓР·РєР° Р‘РёР±Р»РёРѕС‚РµС‡РЅРѕР№ СЃРёСЃС‚РµРјС‹...</div>
+  </div>
+  <script src="flutter_bootstrap.js" async></script>
+</body>
+</html>

@@ -30,74 +30,74 @@ class ApiBookRepository implements BookRepository {
     _searchCancelToken = CancelToken();
 
     return _retry(() => guard(() async {
-      try {
-        final queryParams = <String, dynamic>{
-          'sort': '${q.sortField},${q.sortAscending ? 'asc' : 'desc'}',
-          'page': q.page,
-          'size': q.size,
-          if (q.search.trim().isNotEmpty) 'search': q.search.trim(),
-          if (q.genreId != null) 'genreId': q.genreId,
-          if (q.publisherId != null) 'publisherId': q.publisherId,
-          if (q.yearFrom != null) 'yearFrom': q.yearFrom,
-          if (q.yearTo != null) 'yearTo': q.yearTo,
-          if (q.includeDeleted) 'includeDeleted': true,
-          if (q.delay != null && q.delay! > 0) '__delay': q.delay,
-          if (q.fail != null && q.fail! > 0) '__fail': q.fail,
-        };
+          try {
+            final queryParams = <String, dynamic>{
+              'sort': '${q.sortField},${q.sortAscending ? 'asc' : 'desc'}',
+              'page': q.page,
+              'size': q.size,
+              if (q.search.trim().isNotEmpty) 'search': q.search.trim(),
+              if (q.genreId != null) 'genreId': q.genreId,
+              if (q.publisherId != null) 'publisherId': q.publisherId,
+              if (q.yearFrom != null) 'yearFrom': q.yearFrom,
+              if (q.yearTo != null) 'yearTo': q.yearTo,
+              if (q.includeDeleted) 'includeDeleted': true,
+              if (q.delay != null && q.delay! > 0) '__delay': q.delay,
+              if (q.fail != null && q.fail! > 0) '__fail': q.fail,
+            };
 
-        final response = await _dio.get(
-          '/books',
-          queryParameters: queryParams,
-          cancelToken: _searchCancelToken,
-        );
+            final response = await _dio.get(
+              '/books',
+              queryParameters: queryParams,
+              cancelToken: _searchCancelToken,
+            );
 
-        final data = response.data;
-        if (data is Map<String, dynamic>) {
-          final itemsRaw = data['items'] as List? ?? [];
-          final items = itemsRaw
-              .map((item) => Book.fromJson(item as Map<String, dynamic>))
-              .toList();
-          final total = data['total'] as int? ?? items.length;
-          final page = data['page'] as int? ?? q.page;
-          final size = data['size'] as int? ?? q.size;
-          return PageResult<Book>(
-            items: items,
-            total: total,
-            page: page,
-            size: size,
-          );
-        }
+            final data = response.data;
+            if (data is Map<String, dynamic>) {
+              final itemsRaw = data['items'] as List? ?? [];
+              final items = itemsRaw
+                  .map((item) => Book.fromJson(item as Map<String, dynamic>))
+                  .toList();
+              final total = data['total'] as int? ?? items.length;
+              final page = data['page'] as int? ?? q.page;
+              final size = data['size'] as int? ?? q.size;
+              return PageResult<Book>(
+                items: items,
+                total: total,
+                page: page,
+                size: size,
+              );
+            }
 
-        if (data is List) {
-          final items = data
-              .map((item) => Book.fromJson(item as Map<String, dynamic>))
-              .toList();
-          return PageResult<Book>(
-            items: items,
-            total: items.length,
-            page: q.page,
-            size: q.size,
-          );
-        }
+            if (data is List) {
+              final items = data
+                  .map((item) => Book.fromJson(item as Map<String, dynamic>))
+                  .toList();
+              return PageResult<Book>(
+                items: items,
+                total: items.length,
+                page: q.page,
+                size: q.size,
+              );
+            }
 
-        return PageResult<Book>(
-          items: const [],
-          total: 0,
-          page: q.page,
-          size: q.size,
-        );
-      } on DioException catch (e) {
-        if (CancelToken.isCancel(e)) {
-          return PageResult<Book>(
-            items: const [],
-            total: 0,
-            page: q.page,
-            size: q.size,
-          );
-        }
-        rethrow;
-      }
-    }));
+            return PageResult<Book>(
+              items: const [],
+              total: 0,
+              page: q.page,
+              size: q.size,
+            );
+          } on DioException catch (e) {
+            if (CancelToken.isCancel(e)) {
+              return PageResult<Book>(
+                items: const [],
+                total: 0,
+                page: q.page,
+                size: q.size,
+              );
+            }
+            rethrow;
+          }
+        }));
   }
 
   @override

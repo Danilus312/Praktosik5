@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:dio/dio.dart';
 
 sealed class ApiException implements Exception {
@@ -19,7 +20,8 @@ class UnauthorizedException extends ApiException {
 }
 
 class ForbiddenException extends ApiException {
-  const ForbiddenException([super.message = 'Недостаточно прав для этого действия.']);
+  const ForbiddenException(
+      [super.message = 'Недостаточно прав для этого действия.']);
 }
 
 class NotFoundException extends ApiException {
@@ -36,23 +38,33 @@ class ValidationException extends ApiException {
 }
 
 class ServerException extends ApiException {
-  const ServerException([super.message = 'Ошибка на сервере. Попробуйте позже.']);
+  const ServerException(
+      [super.message = 'Ошибка на сервере. Попробуйте позже.']);
 }
 
 ApiException mapHttpError(int status, dynamic body) {
-  final message = (body is Map && body['message'] is String)
-      ? body['message'] as String
+  dynamic parsed = body;
+  if (parsed is String && parsed.trim().isNotEmpty) {
+    try {
+      parsed = jsonDecode(parsed);
+    } catch (_) {}
+  }
+
+  final message = (parsed is Map && parsed['message'] is String)
+      ? parsed['message'] as String
       : null;
 
   return switch (status) {
     401 => UnauthorizedException(message ?? 'Требуется вход в систему.'),
-    403 => ForbiddenException(message ?? 'Недостаточно прав для этого действия.'),
+    403 =>
+      ForbiddenException(message ?? 'Недостаточно прав для этого действия.'),
     404 => NotFoundException(message ?? 'Запись не найдена.'),
-    409 => ConflictException(message ?? 'Операция невозможна (конфликт данных).'),
+    409 =>
+      ConflictException(message ?? 'Операция невозможна (конфликт данных).'),
     422 => ValidationException(
         message ?? 'Ошибка валидации',
-        (body is Map && body['errors'] is Map)
-            ? (body['errors'] as Map).map((k, v) => MapEntry('$k', '$v'))
+        (parsed is Map && parsed['errors'] is Map)
+            ? (parsed['errors'] as Map).map((k, v) => MapEntry('$k', '$v'))
             : const {},
       ),
     _ => ServerException(message ?? 'Неизвестная ошибка (код $status).'),
@@ -63,13 +75,16 @@ ApiException mapDioError(DioException e) {
   final existing = e.error;
   if (existing is ApiException) return existing;
 
+  if (e.response != null && e.response!.statusCode != null) {
+    return mapHttpError(e.response!.statusCode!, e.response!.data);
+  }
+
   return switch (e.type) {
     DioExceptionType.connectionTimeout ||
     DioExceptionType.sendTimeout ||
     DioExceptionType.receiveTimeout =>
       const NetworkException('Сервер не ответил вовремя (таймаут).'),
-    DioExceptionType.connectionError =>
-      const NetworkException(
+    DioExceptionType.connectionError => const NetworkException(
         'Не удалось соединиться с сервером. Если сервер запущен, проверьте наличие ошибки CORS.',
       ),
     DioExceptionType.cancel => const NetworkException('Запрос отменён.'),

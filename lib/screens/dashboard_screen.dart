@@ -50,7 +50,8 @@ class DashboardScreen extends StatelessWidget {
                         const CircleAvatar(
                           radius: 32,
                           backgroundColor: Colors.teal,
-                          child: Icon(Icons.person, size: 36, color: Colors.white),
+                          child:
+                              Icon(Icons.person, size: 36, color: Colors.white),
                         ),
                         const SizedBox(width: 20),
                         Expanded(
@@ -59,10 +60,12 @@ class DashboardScreen extends StatelessWidget {
                             children: [
                               Text(
                                 user?.fullName ?? '',
-                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                    fontSize: 20, fontWeight: FontWeight.bold),
                               ),
                               const SizedBox(height: 4),
-                              Text('Логин: @${user?.username ?? ""} • Уровень доступа: ${user?.role.label}'),
+                              Text(
+                                  'Логин: @${user?.username ?? ""} • Уровень доступа: ${user?.role.label}'),
                             ],
                           ),
                         ),
@@ -71,7 +74,9 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text('Доступные функциональные модули:', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Text('Доступные функциональные модули:',
+                    style:
+                        TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 16),
                 Wrap(
                   spacing: 16,
@@ -154,9 +159,13 @@ class DashboardScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(title,
+                          style: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
-                      Text(subtitle, style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                      Text(subtitle,
+                          style: const TextStyle(
+                              fontSize: 13, color: Colors.black54)),
                     ],
                   ),
                 ),

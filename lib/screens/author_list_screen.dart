@@ -41,7 +41,9 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
 
   void _pushQuery(AuthorQuery next) {
     final queryParams = next.toQueryParams();
-    final uri = Uri(path: '/authors', queryParameters: queryParams.isEmpty ? null : queryParams);
+    final uri = Uri(
+        path: '/authors',
+        queryParameters: queryParams.isEmpty ? null : queryParams);
     context.go(uri.toString());
   }
 
@@ -76,7 +78,8 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
                 FilterChip(
                   label: const Text('Удалённые'),
                   selected: q.includeDeleted,
-                  onSelected: (val) => _pushQuery(q.copyWith(includeDeleted: val)),
+                  onSelected: (val) =>
+                      _pushQuery(q.copyWith(includeDeleted: val)),
                 ),
               ],
             ),
@@ -98,8 +101,10 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
             ),
           Expanded(
             child: switch (notifier.status) {
-              LoadStatus.loading => const Center(child: CircularProgressIndicator()),
-              LoadStatus.error => Center(child: Text(notifier.error ?? 'Ошибка')),
+              LoadStatus.loading =>
+                const Center(child: CircularProgressIndicator()),
+              LoadStatus.error =>
+                Center(child: Text(notifier.error ?? 'Ошибка')),
               LoadStatus.idle || LoadStatus.success => res.items.isEmpty
                   ? const Center(child: Text('Авторы не найдены'))
                   : LayoutBuilder(
@@ -110,10 +115,12 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
                             itemBuilder: (context, index) {
                               final a = res.items[index];
                               return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                margin: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
                                 child: ListTile(
                                   title: Text(a.fullName),
-                                  subtitle: Text('Страна: ${a.country}, Родился: ${a.birthYear}'),
+                                  subtitle: Text(
+                                      'Страна: ${a.country}, Родился: ${a.birthYear}'),
                                 ),
                               );
                             },
@@ -129,19 +136,36 @@ class _AuthorListScreenState extends State<AuthorListScreen> {
                           onSort: (f) => _pushQuery(
                             q.copyWith(
                               sortField: f,
-                              sortAscending: f == q.sortField ? !q.sortAscending : true,
+                              sortAscending:
+                                  f == q.sortField ? !q.sortAscending : true,
                             ),
                           ),
                           columns: [
-                            TableColumnSpec(label: 'Фамилия Имя', sortField: 'lastName', build: (a) => Text(a.fullName)),
-                            TableColumnSpec(label: 'Страна', sortField: 'country', build: (a) => Text(a.country)),
-                            TableColumnSpec(label: 'Год рождения', sortField: 'birthYear', numeric: true, build: (a) => Text('${a.birthYear}')),
+                            TableColumnSpec(
+                                label: 'Фамилия Имя',
+                                sortField: 'lastName',
+                                build: (a) => Text(a.fullName)),
+                            TableColumnSpec(
+                                label: 'Страна',
+                                sortField: 'country',
+                                build: (a) => Text(a.country)),
+                            TableColumnSpec(
+                                label: 'Год рождения',
+                                sortField: 'birthYear',
+                                numeric: true,
+                                build: (a) => Text('${a.birthYear}')),
                           ],
                           actions: (a) => [
                             if (a.isDeleted)
-                              IconButton(icon: const Icon(Icons.restore, color: Colors.green), onPressed: () => notifier.restore(a.id))
+                              IconButton(
+                                  icon: const Icon(Icons.restore,
+                                      color: Colors.green),
+                                  onPressed: () => notifier.restore(a.id))
                             else
-                              IconButton(icon: const Icon(Icons.delete_outline, color: Colors.orange), onPressed: () => notifier.softDelete(a.id)),
+                              IconButton(
+                                  icon: const Icon(Icons.delete_outline,
+                                      color: Colors.orange),
+                                  onPressed: () => notifier.softDelete(a.id)),
                           ],
                         );
                       },

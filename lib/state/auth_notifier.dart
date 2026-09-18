@@ -102,7 +102,8 @@ class AuthNotifier extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> register(String username, String password, String fullName) async {
+  Future<void> register(
+      String username, String password, String fullName) async {
     final res = await _dio.post('/auth/register', data: {
       'username': username,
       'password': password,

@@ -72,12 +72,14 @@ class PaginationBar extends StatelessWidget {
                 IconButton(
                   icon: const Icon(Icons.chevron_right),
                   tooltip: 'Следующая',
-                  onPressed: page < totalPages ? () => onPageChange(page + 1) : null,
+                  onPressed:
+                      page < totalPages ? () => onPageChange(page + 1) : null,
                 ),
                 IconButton(
                   icon: const Icon(Icons.last_page),
                   tooltip: 'Последняя',
-                  onPressed: page < totalPages ? () => onPageChange(totalPages) : null,
+                  onPressed:
+                      page < totalPages ? () => onPageChange(totalPages) : null,
                 ),
               ],
             ),
