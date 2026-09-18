@@ -37,7 +37,8 @@ class FakeAuthNotifier extends ChangeNotifier implements AuthNotifier {
   Future<void> login(String username, String password) async {}
 
   @override
-  Future<void> register(String username, String password, String fullName) async {}
+  Future<void> register(
+      String username, String password, String fullName) async {}
 
   @override
   Future<void> refreshTokens() async {}
@@ -70,8 +71,9 @@ class FakeBookRepository implements BookRepository {
   }
 
   @override
-  Future<Book?> findById(int id) async =>
-      items.isEmpty ? null : items.firstWhere((b) => b.id == id, orElse: () => items.first);
+  Future<Book?> findById(int id) async => items.isEmpty
+      ? null
+      : items.firstWhere((b) => b.id == id, orElse: () => items.first);
 
   @override
   Future<Book> create(Book book) async => book;
@@ -133,13 +135,15 @@ Widget wrapWithProviders(
 
 void main() {
   group('Widget Tests (Full Suite)', () {
-    testWidgets('1. Loading indicator is displayed during fetch', (tester) async {
+    testWidgets('1. Loading indicator is displayed during fetch',
+        (tester) async {
       final fakeRepo = FakeBookRepository(
         items: [],
         delay: const Duration(milliseconds: 500),
       );
 
-      await tester.pumpWidget(wrapWithProviders(const BookListScreen(), repo: fakeRepo));
+      await tester.pumpWidget(
+          wrapWithProviders(const BookListScreen(), repo: fakeRepo));
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -148,20 +152,25 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('2. Empty state message is displayed when list has no items', (tester) async {
+    testWidgets('2. Empty state message is displayed when list has no items',
+        (tester) async {
       final fakeRepo = FakeBookRepository(items: []);
 
-      await tester.pumpWidget(wrapWithProviders(const BookListScreen(), repo: fakeRepo));
+      await tester.pumpWidget(
+          wrapWithProviders(const BookListScreen(), repo: fakeRepo));
       await tester.pumpAndSettle();
 
-      expect(find.text('По заданным критериям книг не найдено'), findsOneWidget);
+      expect(
+          find.text('По заданным критериям книг не найдено'), findsOneWidget);
       expect(find.byIcon(Icons.search_off), findsOneWidget);
     });
 
-    testWidgets('3. Error state displays reload button and triggers retry', (tester) async {
+    testWidgets('3. Error state displays reload button and triggers retry',
+        (tester) async {
       final fakeRepo = FakeBookRepository(shouldFail: true);
 
-      await tester.pumpWidget(wrapWithProviders(const BookListScreen(), repo: fakeRepo));
+      await tester.pumpWidget(
+          wrapWithProviders(const BookListScreen(), repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Повторить'), findsOneWidget);
@@ -171,7 +180,8 @@ void main() {
       await tester.pumpAndSettle();
     });
 
-    testWidgets('4. Form validation displays required field error', (tester) async {
+    testWidgets('4. Form validation displays required field error',
+        (tester) async {
       await tester.pumpWidget(wrapWithProviders(const BookFormScreen()));
       await tester.pumpAndSettle();
 
@@ -183,7 +193,8 @@ void main() {
       expect(find.text('Поле обязательно для заполнения'), findsOneWidget);
     });
 
-    testWidgets('5. Unauthorized actions are hidden for reader role', (tester) async {
+    testWidgets('5. Unauthorized actions are hidden for reader role',
+        (tester) async {
       final readerAuth = FakeAuthNotifier(
         user: const AppUser(
           id: 3,
@@ -193,7 +204,8 @@ void main() {
         ),
       );
 
-      await tester.pumpWidget(wrapWithProviders(const DashboardScreen(), auth: readerAuth));
+      await tester.pumpWidget(
+          wrapWithProviders(const DashboardScreen(), auth: readerAuth));
       await tester.pumpAndSettle();
 
       expect(find.text('Мои выдачи'), findsOneWidget);
